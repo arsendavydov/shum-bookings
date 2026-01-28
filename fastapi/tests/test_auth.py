@@ -1,6 +1,7 @@
 import pytest
 import httpx
 import time
+from tests.conftest import TEST_SECURE_PASSWORD
 
 
 @pytest.mark.auth
@@ -14,7 +15,7 @@ class TestAuth:
             "/auth/register",
             json={
                 "email": unique_email,
-                "password": "securepass123"
+                "password": TEST_SECURE_PASSWORD
             }
         )
         assert response.status_code == 201
@@ -33,7 +34,7 @@ class TestAuth:
             "/auth/register",
             json={
                 "email": unique_email,
-                "password": "securepass123",
+                "password": TEST_SECURE_PASSWORD,
                 "first_name": "Иван",
                 "last_name": "Иванов",
                 "telegram_id": 123456789,
@@ -58,7 +59,7 @@ class TestAuth:
             "/auth/register",
             json={
                 "email": unique_email,
-                "password": "securepass123"
+                "password": TEST_SECURE_PASSWORD
             }
         )
         assert create_response.status_code == 201
@@ -81,7 +82,7 @@ class TestAuth:
             "/auth/register",
             json={
                 "email": "invalid-email",
-                "password": "securepass123"
+                "password": TEST_SECURE_PASSWORD
             }
         )
         assert response.status_code == 422
@@ -102,7 +103,7 @@ class TestAuth:
         response = client.post(
             "/auth/register",
             json={
-                "password": "securepass123"
+                "password": TEST_SECURE_PASSWORD
             }
         )
         assert response.status_code == 422
@@ -157,7 +158,7 @@ class TestAuth:
             "/auth/login",
             json={
                 "email": "nonexistent@example.com",
-                "password": "securepass123"
+                "password": TEST_SECURE_PASSWORD
             }
         )
         assert response.status_code == 401
@@ -171,7 +172,7 @@ class TestAuth:
             "/auth/register",
             json={
                 "email": unique_email,
-                "password": "correctpass123"
+                "password": TEST_SECURE_PASSWORD
             }
         )
         assert register_response.status_code == 201
@@ -182,7 +183,7 @@ class TestAuth:
             "/auth/login",
             json={
                 "email": unique_email,
-                "password": "wrongpass123"
+                "password": "wrongpass123"  # Намеренно неправильный пароль для теста
             }
         )
         assert login_response.status_code == 401
@@ -194,7 +195,7 @@ class TestAuth:
             "/auth/login",
             json={
                 "email": "invalid-email",
-                "password": "securepass123"
+                "password": TEST_SECURE_PASSWORD
             }
         )
         assert response.status_code == 422
@@ -204,7 +205,7 @@ class TestAuth:
         response = client.post(
             "/auth/login",
             json={
-                "password": "securepass123"
+                "password": TEST_SECURE_PASSWORD
             }
         )
         assert response.status_code == 422

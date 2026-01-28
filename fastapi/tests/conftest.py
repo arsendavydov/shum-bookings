@@ -1,6 +1,7 @@
 import pytest
 import httpx
 import time
+import os
 from datetime import datetime
 from typing import Dict, List, Tuple
 from pathlib import Path
@@ -13,6 +14,11 @@ TEST_PREFIX = f"TEST_{int(time.time())}"
 env_test_path = Path(__file__).resolve().parent.parent.parent / ".test.env"
 if env_test_path.exists():
     load_dotenv(env_test_path, override=True)
+
+# Тестовые данные из переменных окружения
+TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "testpass123")
+TEST_SECURE_PASSWORD = os.getenv("TEST_SECURE_PASSWORD", "securepass123")
+TEST_EXAMPLE_EMAIL_DOMAIN = os.getenv("TEST_EXAMPLE_EMAIL_DOMAIN", "example.com")
 
 
 
@@ -266,7 +272,7 @@ def cleanup_after_test(
                     "/auth/login",
                     json={
                         "email": user_email,
-                        "password": "testpass123"
+                        "password": TEST_USER_PASSWORD
                     }
                 )
                 if login_response.status_code == 200:

@@ -2,6 +2,7 @@ import pytest
 import httpx
 import time
 from datetime import date, timedelta
+from tests.conftest import TEST_USER_PASSWORD
 
 
 @pytest.mark.bookings
@@ -28,7 +29,7 @@ class TestBookings:
             "/auth/register",
             json={
                 "email": unique_email,
-                "password": "testpass123"
+                "password": TEST_USER_PASSWORD
             }
         )
         assert register_response.status_code == 201
@@ -39,7 +40,7 @@ class TestBookings:
             "/auth/login",
             json={
                 "email": unique_email,
-                "password": "testpass123"
+                "password": TEST_USER_PASSWORD
             }
         )
         assert login_response.status_code == 200
@@ -87,7 +88,7 @@ class TestBookings:
             "/auth/register",
             json={
                 "email": unique_email,
-                "password": "testpass123"
+                "password": TEST_USER_PASSWORD
             }
         )
         assert register_response.status_code == 201
@@ -98,7 +99,7 @@ class TestBookings:
             "/auth/login",
             json={
                 "email": unique_email,
-                "password": "testpass123"
+                "password": TEST_USER_PASSWORD
             }
         )
         assert login_response.status_code == 200
@@ -123,7 +124,7 @@ class TestBookings:
             "/auth/register",
             json={
                 "email": unique_email,
-                "password": "testpass123"
+                "password": TEST_USER_PASSWORD
             }
         )
         assert register_response.status_code == 201
@@ -134,7 +135,7 @@ class TestBookings:
             "/auth/login",
             json={
                 "email": unique_email,
-                "password": "testpass123"
+                "password": TEST_USER_PASSWORD
             }
         )
         assert login_response.status_code == 200
@@ -209,7 +210,7 @@ class TestBookings:
             "/auth/register",
             json={
                 "email": unique_email,
-                "password": "testpass123"
+                "password": TEST_USER_PASSWORD
             }
         )
         assert register_response.status_code == 201
@@ -220,7 +221,7 @@ class TestBookings:
             "/auth/login",
             json={
                 "email": unique_email,
-                "password": "testpass123"
+                "password": TEST_USER_PASSWORD
             }
         )
         assert login_response.status_code == 200
@@ -267,7 +268,7 @@ class TestBookings:
             "/auth/register",
             json={
                 "email": unique_email,
-                "password": "testpass123"
+                "password": TEST_USER_PASSWORD
             }
         )
         assert register_response.status_code == 201
@@ -278,7 +279,7 @@ class TestBookings:
             "/auth/login",
             json={
                 "email": unique_email,
-                "password": "testpass123"
+                "password": TEST_USER_PASSWORD
             }
         )
         assert login_response.status_code == 200
