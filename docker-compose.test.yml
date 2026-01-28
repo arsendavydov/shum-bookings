@@ -1,0 +1,32 @@
+services:
+  fastapi_test:
+    image: python:3.11
+    container_name: fastapi_app_test
+    working_dir: /app
+    volumes:
+      - ./fastapi:/app
+      - temp_files_volume:/app/src/static/temp
+    ports:
+      - "8001:8000"
+    command: >
+      sh -c "
+        pip install --no-cache-dir -r requirements.txt &&
+        python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    networks:
+      - booking
+    restart: "no"
+    env_file:
+      - .test.env
+    environment:
+      - PYTHONUNBUFFERED=1
+
+volumes:
+  temp_files_volume:
+    name: temp_files_volume
+    external: true
+
+networks:
+  booking:
+    name: booking
+    external: true

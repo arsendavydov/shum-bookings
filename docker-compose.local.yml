@@ -1,0 +1,97 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres_booking
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - booking
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_booking
+    ports:
+      - "6379:6379"
+    networks:
+      - booking
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  fastapi:
+    image: python:3.11
+    container_name: fastapi_app
+    working_dir: /app
+    volumes:
+      - ./fastapi:/app
+      - temp_files_volume:/app/src/static/temp
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "
+        pip install --no-cache-dir -r requirements.txt &&
+        python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    networks:
+      - booking
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .local.env
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  celery:
+    image: python:3.11
+    container_name: celery_worker
+    working_dir: /app
+    volumes:
+      - ./fastapi:/app
+      - temp_files_volume:/app/src/static/temp
+    command: >
+      sh -c "
+        pip install --no-cache-dir -r requirements.txt &&
+        groupadd -r -g 1000 celeryuser || true &&
+        useradd -r -u 1000 -g celeryuser -m celeryuser || true &&
+        chown -R celeryuser:celeryuser /app/src/static/temp || true &&
+        exec su celeryuser -s /bin/sh -c 'celery -A src.tasks.celery_app worker --loglevel=info'
+      "
+    networks:
+      - booking
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .local.env
+    environment:
+      - PYTHONUNBUFFERED=1
+
+volumes:
+  postgres_data:
+    name: postgres_data
+  temp_files_volume:
+    name: temp_files_volume
+
+networks:
+  booking:
+    name: booking
+
