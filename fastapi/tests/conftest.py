@@ -2,6 +2,7 @@ import pytest
 import httpx
 import time
 import os
+import psycopg2
 from datetime import datetime
 from typing import Dict, List, Tuple
 from pathlib import Path
@@ -24,6 +25,54 @@ if not TEST_PASSWORD:
         "Переменная окружения TEST_PASSWORD должна быть установлена в .test.env файле. "
         "Этот пароль используется для создания тестовых пользователей во время тестов."
     )
+
+
+def cleanup_test_database():
+    """Очищает все данные из тестовой БД перед запуском тестов"""
+    try:
+        # Получаем настройки БД из переменных окружения
+        db_host = os.getenv("DB_HOST", "localhost")
+        db_port = int(os.getenv("DB_PORT", "5432"))
+        db_username = os.getenv("DB_USERNAME", "postgres")
+        db_password = os.getenv("DB_PASSWORD", "postgres")
+        db_name = os.getenv("DB_NAME", "test")
+        
+        # Подключаемся к тестовой БД
+        conn = psycopg2.connect(
+            host=db_host,
+            port=db_port,
+            user=db_username,
+            password=db_password,
+            database=db_name
+        )
+        conn.autocommit = True
+        cursor = conn.cursor()
+        
+        # Отключаем проверку внешних ключей для безопасной очистки
+        cursor.execute("SET session_replication_role = 'replica';")
+        
+        # Получаем список всех таблиц в схеме public, кроме alembic_version
+        cursor.execute("""
+            SELECT tablename FROM pg_tables 
+            WHERE schemaname = 'public' AND tablename != 'alembic_version'
+            ORDER BY tablename;
+        """)
+        tables = [row[0] for row in cursor.fetchall()]
+        
+        if tables:
+            # Очищаем все таблицы с CASCADE для очистки связанных таблиц
+            # RESTART IDENTITY сбрасывает автоинкрементные счетчики
+            table_list = ', '.join([f'"{table}"' for table in tables])
+            cursor.execute(f"TRUNCATE TABLE {table_list} RESTART IDENTITY CASCADE;")
+            print(f"🧹 Очищено {len(tables)} таблиц в тестовой БД перед запуском тестов")
+        
+        # Включаем обратно проверку внешних ключей
+        cursor.execute("SET session_replication_role = 'origin';")
+        
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print(f"⚠️ Ошибка при очистке тестовой БД перед тестами: {e}")
 
 
 

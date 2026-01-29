@@ -45,7 +45,7 @@ fi
 # Запускаем тесты (переходим в fastapi/ для запуска pytest)
 echo "🧪 Запуск тестов..."
 cd "$PROJECT_ROOT/fastapi"
-python3.11 -m pytest tests/ -v || true
+python3.11 -m pytest tests/api_tests/ -v || true
 TEST_EXIT_CODE=$?
 
 # Возвращаемся в корень проекта

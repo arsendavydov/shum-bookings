@@ -1,7 +1,7 @@
 import pytest
 import httpx
 import time
-from tests.conftest import TEST_PASSWORD, TEST_EXAMPLE_EMAIL_DOMAIN
+from ...conftest import TEST_PASSWORD, TEST_EXAMPLE_EMAIL_DOMAIN
 
 
 @pytest.mark.auth
@@ -92,7 +92,7 @@ class TestAuth:
         response = client.post(
             "/auth/register",
             json={
-                "email": "shortpass@{TEST_EXAMPLE_EMAIL_DOMAIN}",
+                "email": f"shortpass@{TEST_EXAMPLE_EMAIL_DOMAIN}",
                 "password": "short"
             }
         )
@@ -113,7 +113,7 @@ class TestAuth:
         response = client.post(
             "/auth/register",
             json={
-                "email": "nopass@{TEST_EXAMPLE_EMAIL_DOMAIN}"
+                "email": f"nopass@{TEST_EXAMPLE_EMAIL_DOMAIN}"
             }
         )
         assert response.status_code == 422
@@ -157,7 +157,7 @@ class TestAuth:
         response = client.post(
             "/auth/login",
             json={
-                "email": "nonexistent@{TEST_EXAMPLE_EMAIL_DOMAIN}",
+                "email": f"nonexistent@{TEST_EXAMPLE_EMAIL_DOMAIN}",
                 "password": TEST_PASSWORD
             }
         )
@@ -215,7 +215,7 @@ class TestAuth:
         response = client.post(
             "/auth/login",
             json={
-                "email": "user@{TEST_EXAMPLE_EMAIL_DOMAIN}"
+                "email": f"user@{TEST_EXAMPLE_EMAIL_DOMAIN}"
             }
         )
         assert response.status_code == 422
