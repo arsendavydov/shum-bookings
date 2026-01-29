@@ -1,6 +1,6 @@
 import pytest
 import time
-from ...conftest import TEST_EXAMPLE_EMAIL_DOMAIN
+from tests.api_tests import TEST_EXAMPLE_EMAIL_DOMAIN
 
 
 @pytest.mark.users

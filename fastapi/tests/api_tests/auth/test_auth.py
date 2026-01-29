@@ -1,7 +1,7 @@
 import pytest
 import httpx
 import time
-from ...conftest import TEST_PASSWORD, TEST_EXAMPLE_EMAIL_DOMAIN
+from tests.api_tests import TEST_PASSWORD, TEST_EXAMPLE_EMAIL_DOMAIN
 
 
 @pytest.mark.auth

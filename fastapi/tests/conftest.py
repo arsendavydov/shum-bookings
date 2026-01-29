@@ -44,14 +44,17 @@ async def _recreate_test_database_async():
         
         # Импортируем Base и все модели для правильной инициализации метаданных
         from src.base import Base
-        from src.models.countries import CountriesOrm
-        from src.models.cities import CitiesOrm
-        from src.models.hotels import HotelsOrm
-        from src.models.rooms import RoomsOrm
-        from src.models.users import UsersOrm
-        from src.models.bookings import BookingsOrm
-        from src.models.facilities import FacilitiesOrm
-        from src.models.images import ImagesOrm, hotels_images
+        from src.models import (
+            CountriesOrm,
+            CitiesOrm,
+            HotelsOrm,
+            RoomsOrm,
+            UsersOrm,
+            BookingsOrm,
+            FacilitiesOrm,
+            ImagesOrm,
+            hotels_images
+        )
         
         # Пересоздаем все таблицы (drop_all + create_all)
         async with engine.begin() as conn:

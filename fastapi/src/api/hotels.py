@@ -4,10 +4,9 @@ from datetime import time, date
 from fastapi_cache.decorator import cache
 from fastapi_cache import FastAPICache
 from src.schemas.hotels import Hotel, HotelPATCH, SchemaHotel, SchemaHotelWithRooms
-from src.schemas.common import MessageResponse
-from src.api.dependencies import PaginationDep, DBDep
+from src.schemas import MessageResponse
+from src.api import PaginationDep, DBDep, get_or_404
 from src.utils.db_manager import DBManager
-from src.api.utils import get_or_404
 
 router = APIRouter()
 

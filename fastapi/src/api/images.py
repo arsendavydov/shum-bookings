@@ -6,10 +6,9 @@ import asyncio
 from pathlib import Path
 from PIL import Image as PILImage
 from src.schemas.images import SchemaImage, ImageUploadResponse
-from src.schemas.common import MessageResponse
-from src.api.dependencies import DBDep
+from src.schemas import MessageResponse
+from src.api import DBDep, get_or_404
 from src.utils.db_manager import DBManager
-from src.api.utils import get_or_404
 from src.tasks.tasks import process_image
 from src.config import settings
 

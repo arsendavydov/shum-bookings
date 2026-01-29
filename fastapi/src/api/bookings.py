@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Body
 from typing import List
 from src.schemas.bookings import Booking, SchemaBooking
-from src.schemas.common import MessageResponse
-from src.api.dependencies import DBDep, CurrentUserDep, PaginationDep
+from src.schemas import MessageResponse
+from src.api import DBDep, CurrentUserDep, PaginationDep
 from src.utils.db_manager import DBManager
 from src.models.bookings import BookingsOrm
 

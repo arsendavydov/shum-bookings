@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Body, Response
 from src.schemas.users import UserRequestRegister, User, UserRequestLogin, TokenResponse, SchemaUser
-from src.api.dependencies import DBDep, AuthServiceDep, CurrentUserDep
+from src.api import DBDep, AuthServiceDep, CurrentUserDep
 from src.utils.db_manager import DBManager
 
 router = APIRouter()

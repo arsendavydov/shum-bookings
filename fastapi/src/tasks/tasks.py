@@ -10,10 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from src.tasks.celery_app import celery_app
 
 # Импортируем все модели для правильной инициализации SQLAlchemy relationships
-from src.models.images import ImagesOrm, hotels_images
-from src.models.hotels import HotelsOrm
-from src.models.cities import CitiesOrm
-from src.models.countries import CountriesOrm
+from src.models import ImagesOrm, hotels_images, HotelsOrm, CitiesOrm, CountriesOrm
 from src.base import Base
 
 # Путь к папке с изображениями

@@ -7,15 +7,17 @@ from pathlib import Path
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from fastapi_cache.decorator import cache
-from src.api.hotels import router as hotels_router
-from src.api.auth import router as auth_router
-from src.api.users import router as users_router
-from src.api.rooms import router as rooms_router
-from src.api.bookings import router as bookings_router
-from src.api.facilities import router as facilities_router
-from src.api.images import router as images_router
-from src.api.countries import router as countries_router
-from src.api.cities import router as cities_router
+from src.api import (
+    hotels_router,
+    auth_router,
+    users_router,
+    rooms_router,
+    bookings_router,
+    facilities_router,
+    images_router,
+    countries_router,
+    cities_router
+)
 from src.config import settings
 from src.db import check_connection, close_engine
 from src import redis_manager
