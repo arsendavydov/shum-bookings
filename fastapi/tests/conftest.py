@@ -2,11 +2,12 @@ import pytest
 import httpx
 import time
 import os
-import psycopg2
+import asyncio
 from datetime import datetime
 from typing import Dict, List, Tuple
 from pathlib import Path
 from dotenv import load_dotenv
+from sqlalchemy.ext.asyncio import create_async_engine
 
 BASE_URL = "http://localhost:8001"  # Тестовый FastAPI на порту 8001
 TEST_PREFIX = f"TEST_{int(time.time())}"
@@ -27,8 +28,8 @@ if not TEST_PASSWORD:
     )
 
 
-def cleanup_test_database():
-    """Очищает все данные из тестовой БД перед запуском тестов"""
+async def _recreate_test_database_async():
+    """Пересоздает все таблицы в тестовой БД через SQLAlchemy"""
     try:
         # Получаем настройки БД из переменных окружения
         db_host = os.getenv("DB_HOST", "localhost")
@@ -37,42 +38,37 @@ def cleanup_test_database():
         db_password = os.getenv("DB_PASSWORD", "postgres")
         db_name = os.getenv("DB_NAME", "test")
         
-        # Подключаемся к тестовой БД
-        conn = psycopg2.connect(
-            host=db_host,
-            port=db_port,
-            user=db_username,
-            password=db_password,
-            database=db_name
-        )
-        conn.autocommit = True
-        cursor = conn.cursor()
+        # Создаем async engine для тестовой БД
+        db_url = f"postgresql+asyncpg://{db_username}:{db_password}@{db_host}:{db_port}/{db_name}"
+        engine = create_async_engine(db_url, echo=False)
         
-        # Отключаем проверку внешних ключей для безопасной очистки
-        cursor.execute("SET session_replication_role = 'replica';")
+        # Импортируем Base и все модели для правильной инициализации метаданных
+        from src.base import Base
+        from src.models.countries import CountriesOrm
+        from src.models.cities import CitiesOrm
+        from src.models.hotels import HotelsOrm
+        from src.models.rooms import RoomsOrm
+        from src.models.users import UsersOrm
+        from src.models.bookings import BookingsOrm
+        from src.models.facilities import FacilitiesOrm
+        from src.models.images import ImagesOrm, hotels_images
         
-        # Получаем список всех таблиц в схеме public, кроме alembic_version
-        cursor.execute("""
-            SELECT tablename FROM pg_tables 
-            WHERE schemaname = 'public' AND tablename != 'alembic_version'
-            ORDER BY tablename;
-        """)
-        tables = [row[0] for row in cursor.fetchall()]
+        # Пересоздаем все таблицы (drop_all + create_all)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+            await conn.run_sync(Base.metadata.create_all)
         
-        if tables:
-            # Очищаем все таблицы с CASCADE для очистки связанных таблиц
-            # RESTART IDENTITY сбрасывает автоинкрементные счетчики
-            table_list = ', '.join([f'"{table}"' for table in tables])
-            cursor.execute(f"TRUNCATE TABLE {table_list} RESTART IDENTITY CASCADE;")
-            print(f"🧹 Очищено {len(tables)} таблиц в тестовой БД перед запуском тестов")
-        
-        # Включаем обратно проверку внешних ключей
-        cursor.execute("SET session_replication_role = 'origin';")
-        
-        cursor.close()
-        conn.close()
+        await engine.dispose()
+        print("✅ Таблицы в тестовой БД пересозданы через SQLAlchemy")
     except Exception as e:
-        print(f"⚠️ Ошибка при очистке тестовой БД перед тестами: {e}")
+        print(f"⚠️ Ошибка при пересоздании таблиц в тестовой БД: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+def cleanup_test_database():
+    """Пересоздает все таблицы в тестовой БД перед запуском тестов"""
+    asyncio.run(_recreate_test_database_async())
 
 
 
