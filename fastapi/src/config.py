@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     # Логирование
     LOG_LEVEL: str = "INFO"  # Уровень логирования: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
+    # Rate Limiting настройки
+    RATE_LIMIT_ENABLED: bool = True  # Включить rate limiting
+    RATE_LIMIT_PER_MINUTE: int = 60  # Количество запросов в минуту для обычных эндпоинтов
+    RATE_LIMIT_AUTH_PER_MINUTE: int = 5  # Количество запросов в минуту для эндпоинтов аутентификации (защита от brute-force)
+
     model_config = SettingsConfigDict(
         env_file=env_file,  # None в Docker (переменные из os.environ), путь к файлу локально
         env_file_encoding="utf-8",

@@ -6,7 +6,7 @@ from pathlib import Path
 import httpx
 import pytest
 from dotenv import load_dotenv
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 BASE_URL = "http://localhost:8001"  # Тестовый FastAPI на порту 8001
 TEST_PREFIX = f"TEST_{int(time.time())}"
@@ -65,6 +65,42 @@ def client():
     """HTTP клиент для тестов"""
     with httpx.Client(base_url=BASE_URL, timeout=10.0) as client:
         yield client
+
+
+@pytest.fixture(scope="function")
+def db_session():
+    """Асинхронная сессия базы данных для тестов.
+    
+    Возвращает async context manager, который нужно использовать с async with.
+    """
+    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+    
+    db_host = os.getenv("DB_HOST", "localhost")
+    db_port = int(os.getenv("DB_PORT", "5432"))
+    db_username = os.getenv("DB_USERNAME", "postgres")
+    db_password = os.getenv("DB_PASSWORD", "postgres")
+    db_name = os.getenv("DB_NAME", "test")
+
+    db_url = f"postgresql+asyncpg://{db_username}:{db_password}@{db_host}:{db_port}/{db_name}"
+    engine = create_async_engine(db_url, echo=False)
+    async_session = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+
+    class SessionContext:
+        def __init__(self, session_factory):
+            self.session_factory = session_factory
+            self.engine = engine
+            self.session = None
+            
+        async def __aenter__(self):
+            self.session = self.session_factory()
+            return self.session
+            
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            if self.session:
+                await self.session.rollback()
+            await self.engine.dispose()
+    
+    return SessionContext(async_session)
 
 
 @pytest.fixture(scope="session")

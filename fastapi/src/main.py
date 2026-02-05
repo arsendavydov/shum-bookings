@@ -25,6 +25,7 @@ from src.middleware.exception_handler import (
     general_exception_handler,
 )
 from src.middleware.http_logging import HTTPLoggingMiddleware
+from src.middleware.rate_limiting import setup_rate_limiting
 from src.utils.logger import get_logger, setup_logging
 from src.utils.startup import shutdown_handler, startup_handler
 
@@ -65,8 +66,18 @@ app = FastAPI(
 if settings.DB_NAME != "test":
     app.add_middleware(HTTPLoggingMiddleware)
     logger.info("HTTPLoggingMiddleware добавлен в приложение")
+    setup_rate_limiting(app)
+    logger.info("Rate Limiting настроен")
 else:
     logger.info("HTTPLoggingMiddleware НЕ добавлен (тестовый режим)")
+    # Rate limiting можно включить в тестах через переменную окружения RATE_LIMIT_ENABLED_IN_TESTS
+    import os
+
+    if os.getenv("RATE_LIMIT_ENABLED_IN_TESTS", "false").lower() == "true":
+        setup_rate_limiting(app)
+        logger.info("Rate Limiting настроен для тестов (RATE_LIMIT_ENABLED_IN_TESTS=true)")
+    else:
+        logger.info("Rate Limiting НЕ настроен (тестовый режим, используйте RATE_LIMIT_ENABLED_IN_TESTS=true для включения)")
 
 app.add_exception_handler(DatabaseError, database_exception_handler)
 app.add_exception_handler(DomainException, domain_exception_handler)

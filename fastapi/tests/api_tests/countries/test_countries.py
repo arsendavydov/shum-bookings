@@ -60,12 +60,17 @@ class TestCountries:
         """Создание страны"""
         timestamp = int(time.time() * 1000)
         unique_name = f"{test_prefix} Новая Страна {timestamp}"
-        # ISO код должен быть ровно 2 буквы, используем уникальный код на основе timestamp
-        letter1 = chr(ord("A") + (timestamp % 26))
-        letter2 = chr(ord("A") + ((timestamp // 26) % 26))
-        unique_iso = f"{letter1}{letter2}"
+        # Используем функцию для генерации уникального ISO кода
+        unique_iso = _generate_unique_iso_code(timestamp)
         country_data = {"name": unique_name, "iso_code": unique_iso}
         response = client.post("/countries", json=country_data)
+        # Если получили 409 (конфликт), пробуем с другим ISO кодом
+        offset = 1
+        while response.status_code == 409 and offset < 10:
+            unique_iso = _generate_unique_iso_code(timestamp, offset)
+            country_data = {"name": unique_name, "iso_code": unique_iso}
+            response = client.post("/countries", json=country_data)
+            offset += 1
         assert response.status_code == 200
         assert response.json() == {"status": "OK"}
 

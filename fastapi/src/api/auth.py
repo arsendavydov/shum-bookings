@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Body, HTTPException, Response
+from fastapi import APIRouter, Body, HTTPException, Request, Response
 
 from src.api.dependencies import AuthServiceDep, CurrentUserDep, DBDep, UsersServiceDep
 from src.config import settings
+from src.middleware.rate_limiting import rate_limit
 from src.schemas.common import MessageResponse
 from src.schemas.users import SchemaUser, TokenResponse, UserRequestLogin, UserRequestRegister, UserResponse
 from src.utils.db_manager import DBManager
@@ -16,7 +17,9 @@ router = APIRouter()
     response_model=UserResponse,
     status_code=201,
 )
+@rate_limit(f"{settings.RATE_LIMIT_AUTH_PER_MINUTE}/minute")
 async def register_user(
+    request: Request,
     auth_service: AuthServiceDep,
     users_service: UsersServiceDep,
     user_data: UserRequestRegister = Body(
@@ -84,7 +87,9 @@ async def register_user(
     description="Аутентифицирует пользователя по email и паролю. Возвращает JWT токен в JSON ответе и устанавливает его в HTTP-only cookie.",
     response_model=TokenResponse,
 )
+@rate_limit(f"{settings.RATE_LIMIT_AUTH_PER_MINUTE}/minute")
 async def login_user(
+    request: Request,
     response: Response,
     db: DBDep,
     auth_service: AuthServiceDep,

@@ -17,6 +17,9 @@ ENV/
 *.egg-info/
 dist/
 build/
+.cache/
+**/.cache/
+pip_cache/
 
 # Testing
 .pytest_cache/
@@ -25,6 +28,7 @@ build/
 htmlcov/
 .tox/
 .nox/
+http_logging_check.py
 
 # Linting & Formatting
 .ruff_cache/

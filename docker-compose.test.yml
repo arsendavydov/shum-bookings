@@ -1,6 +1,8 @@
 services:
   fastapi_test:
-    image: python:3.11
+    build:
+      context: ./fastapi
+      dockerfile: Dockerfile.test
     container_name: fastapi_app_test
     working_dir: /app
     volumes:
@@ -9,10 +11,7 @@ services:
     ports:
       - "8001:8000"
     command: >
-      sh -c "
-        pip install --no-cache-dir -r requirements.txt &&
-        python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload --access-log
-      "
+      python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload --access-log
     networks:
       - booking
     restart: "no"
