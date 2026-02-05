@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.facilities import FacilitiesOrm
 from src.repositories.base import BaseRepository
 from src.repositories.mappers.facilities_mapper import FacilitiesMapper
-from src.repositories.utils import apply_pagination, apply_text_filter
+from src.repositories.utils import apply_text_filter
 from src.schemas.facilities import SchemaFacility
 
 
@@ -16,7 +16,7 @@ class FacilitiesRepository(BaseRepository[FacilitiesOrm]):
     для работы с удобствами.
     """
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         """
         Инициализация репозитория удобств.
 
@@ -55,10 +55,4 @@ class FacilitiesRepository(BaseRepository[FacilitiesOrm]):
         if title is not None:
             query = apply_text_filter(query, self.model.title, title)
 
-        # Применяем пагинацию
-        query = apply_pagination(query, page, per_page)
-
-        result = await self.session.execute(query)
-        orm_objs = list(result.scalars().all())
-
-        return [self._to_schema(obj) for obj in orm_objs]
+        return await self._get_paginated_with_query(page, per_page, query)

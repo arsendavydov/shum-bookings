@@ -50,7 +50,7 @@ def apply_migrations_to_test_db() -> None:
     """Применить миграции к тестовой БД."""
     logger.info("Применение миграций к тестовой БД...")
     try:
-        alembic_ini_path = Path(__file__).resolve().parent.parent.parent.parent / "alembic.ini"
+        alembic_ini_path = Path(__file__).resolve().parent.parent.parent / "alembic.ini"
         if not alembic_ini_path.exists():
             logger.warning("Файл alembic.ini не найден, миграции не применены")
             return
@@ -66,14 +66,14 @@ def apply_migrations_to_test_db() -> None:
         logger.error(f"Ошибка при применении миграций к тестовой БД: {e}", exc_info=True)
 
 
-async def apply_migrations_for_current_db():
+async def apply_migrations_for_current_db() -> None:
     """Применить миграции для текущей БД (используется при DB_NAME=test)."""
     if settings.DB_NAME != "test":
         return
 
     logger.info("Применение миграций к тестовой БД...")
     try:
-        alembic_ini_path = Path(__file__).resolve().parent.parent.parent.parent / "alembic.ini"
+        alembic_ini_path = Path(__file__).resolve().parent.parent.parent / "alembic.ini"
 
         if not alembic_ini_path.exists():
             logger.warning("Файл alembic.ini не найден, миграции не применены")

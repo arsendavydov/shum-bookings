@@ -2,10 +2,10 @@ from fastapi import APIRouter, Body, HTTPException, Path, Query
 from fastapi_cache import FastAPICache
 from fastapi_cache.decorator import cache
 
-from src.api.dependencies import DBDep, PaginationDep
+from src.api.dependencies import CitiesServiceDep, DBDep, PaginationDep
 from src.schemas import MessageResponse
 from src.schemas.cities import City, CityPATCH, SchemaCity
-from src.utils.api_helpers import get_or_404, handle_validation_error
+from src.utils.api_helpers import get_or_404
 from src.utils.db_manager import DBManager
 
 CITIES_CACHE_TTL = 300
@@ -80,7 +80,7 @@ async def get_city_by_id(city_id: int = Path(..., description="ID города")
     response_model=MessageResponse,
 )
 async def create_city(
-    db: DBDep,
+    cities_service: CitiesServiceDep,
     city: City = Body(
         ..., openapi_examples={"1": {"summary": "Создать город", "value": {"name": "Москва", "country_id": 1}}}
     ),
@@ -90,7 +90,7 @@ async def create_city(
     Инвалидирует кэш городов после создания.
 
     Args:
-        db: Сессия базы данных
+        cities_service: Сервис для работы с городами
         city: Данные нового города (name, country_id)
 
     Returns:
@@ -100,12 +100,8 @@ async def create_city(
         HTTPException: 404 если страна с указанным ID не найдена
         HTTPException: 409 если город с таким названием в этой стране уже существует
     """
-    async with DBManager.transaction(db):
-        cities_repo = DBManager.get_cities_repository(db)
-        try:
-            await cities_repo.create_city_with_validation(name=city.name, country_id=city.country_id)
-        except ValueError as e:
-            raise handle_validation_error(e)
+    async with DBManager.transaction(cities_service.session):
+        await cities_service.create_city(name=city.name, country_id=city.country_id)
 
     # Инвалидируем кэш городов
     await FastAPICache.clear(namespace="cities")
@@ -120,14 +116,16 @@ async def create_city(
     response_model=MessageResponse,
 )
 async def update_city(
-    city_id: int = Path(..., description="ID города"), db: DBDep = DBDep, city: City = Body(...)
+    cities_service: CitiesServiceDep,
+    city_id: int = Path(..., description="ID города"),
+    city: City = Body(...),
 ) -> MessageResponse:
     """
     Полное обновление города.
 
     Args:
         city_id: ID города для обновления
-        db: Сессия базы данных
+        cities_service: Сервис для работы с городами
         city: Данные для обновления (name, country_id обязательны)
 
     Returns:
@@ -137,12 +135,8 @@ async def update_city(
         HTTPException: 404 если город или страна не найдены
         HTTPException: 409 если город с таким названием в этой стране уже существует
     """
-    async with DBManager.transaction(db):
-        cities_repo = DBManager.get_cities_repository(db)
-        try:
-            await cities_repo.update_city_with_validation(city_id=city_id, name=city.name, country_id=city.country_id)
-        except ValueError as e:
-            raise handle_validation_error(e)
+    async with DBManager.transaction(cities_service.session):
+        await cities_service.update_city(city_id=city_id, name=city.name, country_id=city.country_id)
 
     # Инвалидируем кэш городов
     await FastAPICache.clear(namespace="cities")
@@ -157,14 +151,16 @@ async def update_city(
     response_model=MessageResponse,
 )
 async def partial_update_city(
-    city_id: int = Path(..., description="ID города"), db: DBDep = DBDep, city: CityPATCH = Body(...)
+    cities_service: CitiesServiceDep,
+    city_id: int = Path(..., description="ID города"),
+    city: CityPATCH = Body(...),
 ) -> MessageResponse:
     """
     Частичное обновление города.
 
     Args:
         city_id: ID города для обновления
-        db: Сессия базы данных
+        cities_service: Сервис для работы с городами
         city: Данные для обновления (name, country_id опциональны)
 
     Returns:
@@ -174,15 +170,11 @@ async def partial_update_city(
         HTTPException: 404 если город или страна не найдены
         HTTPException: 409 если город с таким названием в этой стране уже существует
     """
-    async with DBManager.transaction(db):
-        cities_repo = DBManager.get_cities_repository(db)
-        try:
-            update_data = city.model_dump(exclude_unset=True)
-            await cities_repo.partial_update_city_with_validation(
-                city_id=city_id, name=update_data.get("name"), country_id=update_data.get("country_id")
-            )
-        except ValueError as e:
-            raise handle_validation_error(e)
+    async with DBManager.transaction(cities_service.session):
+        update_data = city.model_dump(exclude_unset=True)
+        await cities_service.partial_update_city(
+            city_id=city_id, name=update_data.get("name"), country_id=update_data.get("country_id")
+        )
 
     # Инвалидируем кэш городов
     await FastAPICache.clear(namespace="cities")

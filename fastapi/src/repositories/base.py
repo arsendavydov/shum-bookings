@@ -17,7 +17,7 @@ class BaseRepository(Generic[ModelType]):
     Предоставляет общие методы CRUD операций для всех моделей.
     """
 
-    def __init__(self, session: AsyncSession, model: type[ModelType]):
+    def __init__(self, session: AsyncSession, model: type[ModelType]) -> None:
         """
         Инициализация репозитория.
 
@@ -218,3 +218,113 @@ class BaseRepository(Generic[ModelType]):
         query = select(self.model).where(self.model.id == id)
         result = await self.session.execute(query)
         return result.scalar_one_or_none() is not None
+
+    async def exists_by_field(self, field_name: str, value: Any, exclude_id: int | None = None) -> bool:
+        """
+        Проверить существование записи по полю.
+
+        Args:
+            field_name: Название поля модели
+            value: Значение для проверки
+            exclude_id: ID записи, которую нужно исключить из проверки (для обновления)
+
+        Returns:
+            True если запись существует, False иначе
+        """
+        from sqlalchemy import func
+
+        field = getattr(self.model, field_name, None)
+        if field is None:
+            raise ValueError(f"Поле '{field_name}' не найдено в модели {self.model.__name__}")
+
+        query = select(func.count(self.model.id)).where(field == value)
+
+        if exclude_id is not None:
+            query = query.where(self.model.id != exclude_id)
+
+        result = await self.session.execute(query)
+        count = result.scalar_one() or 0
+        return count > 0
+
+    async def get_by_field(self, field_name: str, value: Any) -> Any | None:
+        """
+        Получить запись по полю.
+
+        Возвращает Pydantic схему через Data Mapper паттерн.
+
+        Args:
+            field_name: Название поля модели
+            value: Значение для поиска
+
+        Returns:
+            Pydantic схема или None, если не найдено
+
+        Raises:
+            ValueError: Если поле не найдено в модели
+            NotImplementedError: Если метод _to_schema не переопределен
+        """
+        field = getattr(self.model, field_name, None)
+        if field is None:
+            raise ValueError(f"Поле '{field_name}' не найдено в модели {self.model.__name__}")
+
+        query = select(self.model).where(field == value)
+        result = await self.session.execute(query)
+        orm_obj = result.scalar_one_or_none()
+
+        if orm_obj is None:
+            return None
+
+        return self._to_schema(orm_obj)
+
+    async def get_by_field_orm(self, field_name: str, value: Any) -> ModelType | None:
+        """
+        Получить ORM объект по полю (для внутреннего использования).
+
+        Args:
+            field_name: Название поля модели
+            value: Значение для поиска
+
+        Returns:
+            ORM объект или None, если не найдено
+
+        Raises:
+            ValueError: Если поле не найдено в модели
+        """
+        field = getattr(self.model, field_name, None)
+        if field is None:
+            raise ValueError(f"Поле '{field_name}' не найдено в модели {self.model.__name__}")
+
+        query = select(self.model).where(field == value)
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def _get_paginated_with_query(
+        self,
+        page: int,
+        per_page: int,
+        query: Any,
+    ) -> list[Any]:
+        """
+        Внутренний метод для получения списка записей с пагинацией по готовому query.
+
+        Этот метод используется в дочерних классах для упрощения реализации get_paginated.
+
+        Args:
+            page: Номер страницы (начиная с 1)
+            per_page: Количество элементов на странице
+            query: Предварительно построенный SQLAlchemy запрос
+
+        Returns:
+            Список Pydantic схем
+
+        Raises:
+            NotImplementedError: Если метод _to_schema не переопределен
+        """
+        from src.repositories.utils import apply_pagination
+
+        query = apply_pagination(query, page, per_page)
+
+        result = await self.session.execute(query)
+        orm_objs = list(result.scalars().all())
+
+        return [self._to_schema(obj) for obj in orm_objs]

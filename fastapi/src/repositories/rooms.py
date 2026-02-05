@@ -21,7 +21,7 @@ class RoomsRepository(BaseRepository[RoomsOrm]):
     для работы с комнатами.
     """
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         """
         Инициализация репозитория комнат.
 

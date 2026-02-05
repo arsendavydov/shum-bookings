@@ -14,7 +14,7 @@ class ImagesRepository(BaseRepository[ImagesOrm]):
     для работы с изображениями.
     """
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         """
         Инициализация репозитория изображений.
 

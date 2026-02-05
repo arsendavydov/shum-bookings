@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -22,7 +23,7 @@ class DBManager:
     Автоматически закрывает сессию при выходе из контекста.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Инициализация DBManager."""
         self.session: AsyncSession | None = None
 
@@ -172,7 +173,7 @@ class DBManager:
 
     @staticmethod
     @asynccontextmanager
-    async def transaction(session: AsyncSession):
+    async def transaction(session: AsyncSession) -> AsyncIterator[None]:
         """
         Контекстный менеджер для автоматического управления транзакциями.
 

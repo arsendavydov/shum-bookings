@@ -4,7 +4,7 @@ from datetime import date, timedelta
 import httpx
 import pytest
 
-from tests.api_tests import TEST_EXAMPLE_EMAIL_DOMAIN, TEST_PASSWORD
+from tests.api_tests import BASE_URL, TEST_EXAMPLE_EMAIL_DOMAIN, TEST_PASSWORD
 
 
 @pytest.mark.bookings
@@ -109,7 +109,7 @@ class TestBookings:
 
         response = client.post("/bookings", json=booking_data)
         assert response.status_code == 404
-        assert "номер не найден" in response.json()["detail"].lower()
+        assert "номер" in response.json()["detail"].lower() and "не найден" in response.json()["detail"].lower()
 
     def test_create_booking_unauthorized(self, client, created_hotel_ids):
         """Создание бронирования без аутентификации"""
@@ -123,7 +123,7 @@ class TestBookings:
 
         room_id = rooms_response.json()[0]["id"]
 
-        test_client = httpx.Client(base_url="http://localhost:8000", timeout=10.0)
+        test_client = httpx.Client(base_url=BASE_URL, timeout=10.0)
 
         today = date.today()
         date_from = today + timedelta(days=1)
@@ -194,7 +194,7 @@ class TestBookings:
 
     def test_get_my_bookings_unauthorized(self, client):
         """Получение своих бронирований без аутентификации"""
-        test_client = httpx.Client(base_url="http://localhost:8000", timeout=10.0)
+        test_client = httpx.Client(base_url=BASE_URL, timeout=10.0)
         response = test_client.get("/bookings/me")
         assert response.status_code == 401
         test_client.close()

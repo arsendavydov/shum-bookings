@@ -39,7 +39,9 @@ def _create_handlers(log_file: Path, level: int) -> tuple[logging.FileHandler, l
     """Создать file и console handlers с общим форматтером."""
     formatter = logging.Formatter(LOG_FORMAT, datefmt=DATE_FORMAT)
 
-    file_handler = RotatingFileHandler(log_file, maxBytes=MAX_BYTES, backupCount=BACKUP_COUNT, encoding="utf-8")
+    file_handler = RotatingFileHandler(
+        log_file, maxBytes=MAX_BYTES, backupCount=BACKUP_COUNT, encoding="utf-8", delay=False
+    )
     file_handler.setLevel(level)
     file_handler.setFormatter(formatter)
 
@@ -87,6 +89,7 @@ def setup_logging(log_level: str | None = None, log_file_name: str = "app.log") 
         "celery.worker",
         "alembic",
         "alembic.runtime.migration",
+        "src.middleware.http_logging",  # HTTP‑middleware всегда пропагирует в root
     ]
 
     for logger_name in propagate_loggers:
@@ -102,6 +105,12 @@ def setup_logging(log_level: str | None = None, log_file_name: str = "app.log") 
     sqlalchemy_logger.addHandler(file_handler)
     sqlalchemy_logger.addHandler(console_handler)
     sqlalchemy_logger.propagate = False
+
+    # python-multipart (загрузка файлов) - глушим DEBUG-спам, оставляем только WARNING+
+    multipart_logger = logging.getLogger("python_multipart.multipart")
+    multipart_logger.setLevel(logging.WARNING)
+    multipart_logger.handlers.clear()
+    multipart_logger.propagate = False
 
 
 def get_logger(name: str) -> logging.Logger:

@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -10,37 +11,68 @@ from src.api import (
     cities_router,
     countries_router,
     facilities_router,
+    health_router,
     hotels_router,
     images_router,
     rooms_router,
     users_router,
 )
 from src.config import settings
-from src.middleware.exception_handler import database_exception_handler, general_exception_handler
+from src.exceptions.base import DomainException
+from src.middleware.exception_handler import (
+    database_exception_handler,
+    domain_exception_handler,
+    general_exception_handler,
+)
 from src.middleware.http_logging import HTTPLoggingMiddleware
-from src.utils.logger import setup_logging
+from src.utils.logger import get_logger, setup_logging
 from src.utils.startup import shutdown_handler, startup_handler
 
 log_file_name = "app_test.log" if settings.DB_NAME == "test" else "app.log"
 setup_logging(log_file_name=log_file_name)
 
+logger = get_logger(__name__)
+logger.info(
+    f"Приложение запущено. Режим: {'тестовый' if settings.DB_NAME == 'test' else 'основной'}. Логирование в файл: {log_file_name}"
+)
+
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Lifespan события для FastAPI - выполняется при старте и остановке приложения."""
     await startup_handler()
     yield
     await shutdown_handler()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    openapi_tags=[
+        {"name": "Система", "description": "Эндпоинты для мониторинга состояния приложения"},
+        {"name": "Аутентификация", "description": "Регистрация, вход и выход пользователей"},
+        {"name": "Пользователи", "description": "Управление пользователями"},
+        {"name": "Отели", "description": "Управление отелями"},
+        {"name": "Номера", "description": "Управление номерами отелей"},
+        {"name": "Бронирования", "description": "Управление бронированиями"},
+        {"name": "Удобства", "description": "Управление удобствами номеров"},
+        {"name": "Изображения отелей", "description": "Загрузка и управление изображениями отелей"},
+        {"name": "Страны", "description": "Управление странами"},
+        {"name": "Города", "description": "Управление городами"},
+    ],
+)
 
+# Регистрируем middleware ПЕРЕД роутерами
 if settings.DB_NAME != "test":
     app.add_middleware(HTTPLoggingMiddleware)
+    logger.info("HTTPLoggingMiddleware добавлен в приложение")
+else:
+    logger.info("HTTPLoggingMiddleware НЕ добавлен (тестовый режим)")
 
 app.add_exception_handler(DatabaseError, database_exception_handler)
+app.add_exception_handler(DomainException, domain_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 
+app.include_router(health_router, tags=["Система"])
 app.include_router(auth_router, prefix="/auth", tags=["Аутентификация"])
 app.include_router(users_router, prefix="/users", tags=["Пользователи"])
 app.include_router(hotels_router, prefix="/hotels", tags=["Отели"])

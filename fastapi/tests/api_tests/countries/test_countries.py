@@ -17,8 +17,13 @@ class TestCountries:
 
     def test_get_country_by_id(self, client, test_prefix):
         """Получение страны по ID"""
-        unique_name = f"{test_prefix} Тестовая Страна {int(time.time())}"
-        country_data = {"name": unique_name, "iso_code": "TS"}
+        timestamp = int(time.time() * 1000)
+        unique_name = f"{test_prefix} Тестовая Страна {timestamp}"
+        # Генерируем уникальный ISO код из timestamp
+        letter1 = chr(ord("A") + (timestamp % 26))
+        letter2 = chr(ord("A") + ((timestamp // 26) % 26))
+        unique_iso = f"{letter1}{letter2}"
+        country_data = {"name": unique_name, "iso_code": unique_iso}
         create_response = client.post("/countries", json=country_data)
         if create_response.status_code == 200:
             get_response = client.get(f"/countries?name={unique_name}")
@@ -33,7 +38,7 @@ class TestCountries:
                 assert "name" in data
                 assert "iso_code" in data
                 assert data["name"] == unique_name
-                assert data["iso_code"] == "TS"
+                assert data["iso_code"] == unique_iso
 
                 client.delete(f"/countries/{country_id}")
 
@@ -45,9 +50,12 @@ class TestCountries:
 
     def test_create_country(self, client, test_prefix):
         """Создание страны"""
-        unique_name = f"{test_prefix} Новая Страна {int(time.time())}"
-        # ISO код должен быть ровно 2 символа
-        unique_iso = f"T{int(time.time()) % 10:01d}"
+        timestamp = int(time.time() * 1000)
+        unique_name = f"{test_prefix} Новая Страна {timestamp}"
+        # ISO код должен быть ровно 2 буквы, используем уникальный код на основе timestamp
+        letter1 = chr(ord("A") + (timestamp % 26))
+        letter2 = chr(ord("A") + ((timestamp // 26) % 26))
+        unique_iso = f"{letter1}{letter2}"
         country_data = {"name": unique_name, "iso_code": unique_iso}
         response = client.post("/countries", json=country_data)
         assert response.status_code == 200
@@ -100,7 +108,9 @@ class TestCountries:
 
         duplicate_response = client.post("/countries", json={"name": unique_name2, "iso_code": unique_iso})
         assert duplicate_response.status_code == 409
-        assert "ISO кодом" in duplicate_response.json()["detail"]
+        assert (
+            "ISO код" in duplicate_response.json()["detail"] and "уже существует" in duplicate_response.json()["detail"]
+        )
 
         get_response = client.get(f"/countries?name={unique_name1}")
         if get_response.status_code == 200 and get_response.json():
@@ -109,8 +119,13 @@ class TestCountries:
 
     def test_update_country(self, client, test_prefix):
         """Обновление страны"""
-        unique_name = f"{test_prefix} Обновляемая {int(time.time())}"
-        country_data = {"name": unique_name, "iso_code": "UP"}
+        timestamp = int(time.time() * 1000)
+        unique_name = f"{test_prefix} Обновляемая {timestamp}"
+        # Генерируем уникальный ISO код
+        letter1 = chr(ord("A") + (timestamp % 26))
+        letter2 = chr(ord("A") + ((timestamp // 26) % 26))
+        unique_iso = f"{letter1}{letter2}"
+        country_data = {"name": unique_name, "iso_code": unique_iso}
         create_response = client.post("/countries", json=country_data)
         assert create_response.status_code == 200
 
@@ -118,8 +133,8 @@ class TestCountries:
         if get_response.status_code == 200 and get_response.json():
             country_id = get_response.json()[0]["id"]
 
-            updated_name = f"{test_prefix} Обновленная {int(time.time())}"
-            response = client.put(f"/countries/{country_id}", json={"name": updated_name, "iso_code": "UP"})
+            updated_name = f"{test_prefix} Обновленная {timestamp}"
+            response = client.put(f"/countries/{country_id}", json={"name": updated_name, "iso_code": unique_iso})
             assert response.status_code == 200
             assert response.json() == {"status": "OK"}
 
@@ -150,8 +165,13 @@ class TestCountries:
 
     def test_partial_update_country(self, client, test_prefix):
         """Частичное обновление страны"""
-        unique_name = f"{test_prefix} Частично {int(time.time())}"
-        country_data = {"name": unique_name, "iso_code": "PA"}
+        timestamp = int(time.time() * 1000)
+        unique_name = f"{test_prefix} Частично {timestamp}"
+        # Генерируем уникальный ISO код
+        letter1 = chr(ord("A") + (timestamp % 26))
+        letter2 = chr(ord("A") + ((timestamp // 26) % 26))
+        unique_iso = f"{letter1}{letter2}"
+        country_data = {"name": unique_name, "iso_code": unique_iso}
         create_response = client.post("/countries", json=country_data)
         assert create_response.status_code == 200
 
@@ -159,7 +179,7 @@ class TestCountries:
         if get_response.status_code == 200 and get_response.json():
             country_id = get_response.json()[0]["id"]
 
-            updated_name = f"{test_prefix} Частично Обновленная {int(time.time())}"
+            updated_name = f"{test_prefix} Частично Обновленная {timestamp}"
             response = client.patch(f"/countries/{country_id}", json={"name": updated_name})
             assert response.status_code == 200
             assert response.json() == {"status": "OK"}
@@ -172,8 +192,13 @@ class TestCountries:
 
     def test_delete_country(self, client, test_prefix):
         """Удаление страны"""
-        unique_name = f"{test_prefix} Для удаления {int(time.time())}"
-        country_data = {"name": unique_name, "iso_code": "DL"}
+        timestamp = int(time.time() * 1000)
+        unique_name = f"{test_prefix} Для удаления {timestamp}"
+        # Генерируем уникальный ISO код
+        letter1 = chr(ord("A") + (timestamp % 26))
+        letter2 = chr(ord("A") + ((timestamp // 26) % 26))
+        unique_iso = f"{letter1}{letter2}"
+        country_data = {"name": unique_name, "iso_code": unique_iso}
         create_response = client.post("/countries", json=country_data)
         assert create_response.status_code == 200
 
@@ -190,8 +215,13 @@ class TestCountries:
 
     def test_filter_countries_by_name(self, client, test_prefix):
         """Фильтрация стран по названию"""
-        unique_name = f"{test_prefix} Фильтр Тест {int(time.time())}"
-        country_data = {"name": unique_name, "iso_code": "FT"}
+        timestamp = int(time.time() * 1000)
+        unique_name = f"{test_prefix} Фильтр Тест {timestamp}"
+        # Генерируем уникальный ISO код
+        letter1 = chr(ord("A") + (timestamp % 26))
+        letter2 = chr(ord("A") + ((timestamp // 26) % 26))
+        unique_iso = f"{letter1}{letter2}"
+        country_data = {"name": unique_name, "iso_code": unique_iso}
         create_response = client.post("/countries", json=country_data)
         assert create_response.status_code == 200
 

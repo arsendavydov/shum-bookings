@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Body, HTTPException, Query
 
-from src.api.dependencies import DBDep, PaginationDep
+from src.api.dependencies import DBDep, PaginationDep, UsersServiceDep
 from src.schemas import MessageResponse
 from src.schemas.users import SchemaUser, UserPATCH, UserRegister
 from src.utils.api_helpers import get_or_404
@@ -67,14 +67,14 @@ async def get_user_by_id(user_id: int, db: DBDep) -> SchemaUser:
     description="Полностью обновляет информацию о пользователе по указанному ID",
     response_model=MessageResponse,
 )
-async def update_user(user_id: int, db: DBDep, user: UserRegister = Body(...)) -> MessageResponse:
+async def update_user(user_id: int, users_service: UsersServiceDep, user: UserRegister = Body(...)) -> MessageResponse:
     """
     Полное обновление пользователя.
 
     Args:
         user_id: ID пользователя для обновления
-        db: Сессия базы данных
         user: Данные для обновления
+        users_service: Сервис для работы с пользователями
 
     Returns:
         Словарь со статусом операции {"status": "OK"}
@@ -82,27 +82,8 @@ async def update_user(user_id: int, db: DBDep, user: UserRegister = Body(...)) -
     Raises:
         HTTPException: 404 если пользователь с указанным ID не найден
     """
-    async with DBManager.transaction(db):
-        repo = DBManager.get_users_repository(db)
-
-        # Проверяем существование пользователя
-        existing_user = await repo.get_by_id(user_id)
-        if existing_user is None:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
-
-        # Проверяем уникальность email, если он изменяется
-        user_data = user.model_dump(exclude_none=True)
-        if "email" in user_data and user_data["email"] != existing_user.email:
-            if await repo.exists_by_email(user_data["email"]):
-                raise HTTPException(status_code=409, detail=f"Пользователь с email {user_data['email']} уже существует")
-
-        try:
-            updated_user = await repo.edit(id=user_id, **user_data)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-
-        if updated_user is None:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
+    async with DBManager.transaction(users_service.session):
+        await users_service.update_user(user_id=user_id, user_data=user)
 
     return MessageResponse(status="OK")
 
@@ -113,14 +94,16 @@ async def update_user(user_id: int, db: DBDep, user: UserRegister = Body(...)) -
     description="Частично обновляет информацию о пользователе по указанному ID",
     response_model=MessageResponse,
 )
-async def partial_update_user(user_id: int, db: DBDep, user: UserPATCH = Body(...)) -> MessageResponse:
+async def partial_update_user(
+    user_id: int, users_service: UsersServiceDep, user: UserPATCH = Body(...)
+) -> MessageResponse:
     """
     Частичное обновление пользователя.
 
     Args:
         user_id: ID пользователя для обновления
-        db: Сессия базы данных
         user: Данные для обновления (опционально)
+        users_service: Сервис для работы с пользователями
 
     Returns:
         Словарь со статусом операции {"status": "OK"}
@@ -128,16 +111,10 @@ async def partial_update_user(user_id: int, db: DBDep, user: UserPATCH = Body(..
     Raises:
         HTTPException: 404 если пользователь с указанным ID не найден
     """
-    async with DBManager.transaction(db):
-        repo = DBManager.get_users_repository(db)
-        existing_user = await repo.get_by_id(user_id)
-        if existing_user is None:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
-
-        # Обновляем только переданные поля
+    async with DBManager.transaction(users_service.session):
         update_data = user.model_dump(exclude_unset=True)
         if update_data:
-            await repo.update(id=user_id, **update_data)
+            await users_service.partial_update_user(user_id=user_id, user_data=update_data)
 
     return MessageResponse(status="OK")
 
@@ -148,13 +125,13 @@ async def partial_update_user(user_id: int, db: DBDep, user: UserPATCH = Body(..
     description="Удаляет пользователя по указанному ID",
     response_model=MessageResponse,
 )
-async def delete_user(user_id: int, db: DBDep) -> MessageResponse:
+async def delete_user(user_id: int, users_service: UsersServiceDep) -> MessageResponse:
     """
     Удалить пользователя.
 
     Args:
         user_id: ID пользователя для удаления
-        db: Сессия базы данных
+        users_service: Сервис для работы с пользователями
 
     Returns:
         Словарь со статусом операции {"status": "OK"}
@@ -162,13 +139,8 @@ async def delete_user(user_id: int, db: DBDep) -> MessageResponse:
     Raises:
         HTTPException: 404 если пользователь с указанным ID не найден
     """
-    async with DBManager.transaction(db):
-        repo = DBManager.get_users_repository(db)
-        try:
-            deleted = await repo.delete(user_id)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-
+    async with DBManager.transaction(users_service.session):
+        deleted = await users_service.delete_user(user_id)
         if not deleted:
             raise HTTPException(status_code=404, detail="Пользователь не найден")
 

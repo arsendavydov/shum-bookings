@@ -78,6 +78,9 @@ ignore = [
     "PLR2004", # magic value used in comparison
     "S101",    # use of assert (pytest uses assert)
 ]
+"src/api/images.py" = [
+    "I001",  # import sorting - импорты уже логически отсортированы
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]

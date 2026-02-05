@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Body, HTTPException, Response
 
-from src.api.dependencies import AuthServiceDep, CurrentUserDep, DBDep
+from src.api.dependencies import AuthServiceDep, CurrentUserDep, DBDep, UsersServiceDep
 from src.config import settings
 from src.schemas.common import MessageResponse
 from src.schemas.users import SchemaUser, TokenResponse, UserRequestLogin, UserRequestRegister, UserResponse
@@ -17,8 +17,8 @@ router = APIRouter()
     status_code=201,
 )
 async def register_user(
-    db: DBDep,
     auth_service: AuthServiceDep,
+    users_service: UsersServiceDep,
     user_data: UserRequestRegister = Body(
         ...,
         openapi_examples={
@@ -56,7 +56,8 @@ async def register_user(
     - pachca_id: Pachca ID пользователя
 
     Args:
-        db: Сессия базы данных
+        auth_service: Сервис для работы с аутентификацией
+        users_service: Сервис для работы с пользователями
         user_data: Данные для регистрации
 
     Returns:
@@ -66,17 +67,12 @@ async def register_user(
         HTTPException: 409 если email уже существует
         HTTPException: 422 если данные невалидны (автоматически через Pydantic)
     """
-    async with DBManager.transaction(db):
-        repo = DBManager.get_users_repository(db)
-        # Проверка уникальности email
-        if await repo.exists_by_email(user_data.email):
-            raise HTTPException(status_code=409, detail=f"Пользователь с email {user_data.email} уже существует")
-
+    async with DBManager.transaction(users_service.session):
         # Подготовка данных пользователя (хеширование пароля)
         user_register_data = auth_service.prepare_user_data_for_registration(user_data)
 
-        # Создание пользователя через репозиторий
-        user = await repo.create(**user_register_data.model_dump(exclude_none=True))
+        # Создание пользователя через сервис
+        user = await users_service.register_user(user_register_data)
 
     # Преобразуем SchemaUser в UserResponse (они идентичны, но для ясности используем UserResponse)
     return UserResponse.model_validate(user)

@@ -1,10 +1,9 @@
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.users import UsersOrm
 from src.repositories.base import BaseRepository
 from src.repositories.mappers.users_mapper import UsersMapper
-from src.repositories.utils import apply_pagination
 from src.schemas.users import SchemaUser
 
 
@@ -16,7 +15,7 @@ class UsersRepository(BaseRepository[UsersOrm]):
     для работы с пользователями.
     """
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         """
         Инициализация репозитория пользователей.
 
@@ -47,14 +46,7 @@ class UsersRepository(BaseRepository[UsersOrm]):
         Returns:
             Pydantic схема SchemaUser или None, если не найдено
         """
-        query = select(self.model).where(self.model.email == email)
-        result = await self.session.execute(query)
-        orm_obj = result.scalar_one_or_none()
-
-        if orm_obj is None:
-            return None
-
-        return self._to_schema(orm_obj)
+        return await self.get_by_field("email", email)
 
     async def get_orm_by_email(self, email: str) -> UsersOrm | None:
         """
@@ -66,9 +58,7 @@ class UsersRepository(BaseRepository[UsersOrm]):
         Returns:
             ORM объект UsersOrm или None, если не найдено
         """
-        query = select(self.model).where(self.model.email == email)
-        result = await self.session.execute(query)
-        return result.scalar_one_or_none()
+        return await self.get_by_field_orm("email", email)
 
     async def exists_by_email(self, email: str) -> bool:
         """
@@ -80,10 +70,7 @@ class UsersRepository(BaseRepository[UsersOrm]):
         Returns:
             True если пользователь существует, False иначе
         """
-        query = select(func.count(self.model.id)).where(self.model.email == email)
-        result = await self.session.execute(query)
-        count = result.scalar_one() or 0
-        return count > 0
+        return await self.exists_by_field("email", email)
 
     async def get_paginated(self, page: int, per_page: int, email: str | None = None) -> list[SchemaUser]:
         """
@@ -103,10 +90,4 @@ class UsersRepository(BaseRepository[UsersOrm]):
         if email is not None:
             query = query.where(self.model.email == email)
 
-        # Применяем пагинацию
-        query = apply_pagination(query, page, per_page)
-
-        result = await self.session.execute(query)
-        orm_objs = list(result.scalars().all())
-
-        return [self._to_schema(obj) for obj in orm_objs]
+        return await self._get_paginated_with_query(page, per_page, query)

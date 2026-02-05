@@ -10,11 +10,20 @@
 """
 
 from collections.abc import AsyncGenerator
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Cookie, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+
+if TYPE_CHECKING:
+    from src.services.bookings import BookingsService
+    from src.services.cities import CitiesService
+    from src.services.countries import CountriesService
+    from src.services.hotels import HotelsService
+    from src.services.images import ImagesService
+    from src.services.rooms import RoomsService
+    from src.services.users import UsersService
 
 from src.repositories.bookings import BookingsRepository
 from src.repositories.hotels import HotelsRepository
@@ -204,6 +213,137 @@ def get_auth_service() -> AuthService:
 
 
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+
+
+# ============================================================================
+# СЕРВИСЫ
+# ============================================================================
+
+
+async def get_bookings_service(db: DBDep) -> "BookingsService":
+    """
+    Dependency для получения сервиса бронирований.
+
+    Args:
+        db: Сессия базы данных
+
+    Returns:
+        BookingsService: Сервис для работы с бронированиями
+    """
+    from src.services.bookings import BookingsService
+
+    return BookingsService(db)
+
+
+BookingsServiceDep = Annotated["BookingsService", Depends(get_bookings_service)]
+
+
+async def get_hotels_service(db: DBDep) -> "HotelsService":
+    """
+    Dependency для получения сервиса отелей.
+
+    Args:
+        db: Сессия базы данных
+
+    Returns:
+        HotelsService: Сервис для работы с отелями
+    """
+    from src.services.hotels import HotelsService
+
+    return HotelsService(db)
+
+
+HotelsServiceDep = Annotated["HotelsService", Depends(get_hotels_service)]
+
+
+async def get_rooms_service(db: DBDep) -> "RoomsService":
+    """
+    Dependency для получения сервиса номеров.
+
+    Args:
+        db: Сессия базы данных
+
+    Returns:
+        RoomsService: Сервис для работы с номерами
+    """
+    from src.services.rooms import RoomsService
+
+    return RoomsService(db)
+
+
+RoomsServiceDep = Annotated["RoomsService", Depends(get_rooms_service)]
+
+
+async def get_users_service(db: DBDep) -> "UsersService":
+    """
+    Dependency для получения сервиса пользователей.
+
+    Args:
+        db: Сессия базы данных
+
+    Returns:
+        UsersService: Сервис для работы с пользователями
+    """
+    from src.services.users import UsersService
+
+    return UsersService(db)
+
+
+UsersServiceDep = Annotated["UsersService", Depends(get_users_service)]
+
+
+async def get_images_service(db: DBDep) -> "ImagesService":
+    """
+    Dependency для получения сервиса изображений.
+
+    Args:
+        db: Сессия базы данных
+
+    Returns:
+        ImagesService: Сервис для работы с изображениями
+    """
+    from src.services.images import ImagesService
+
+    return ImagesService(db)
+
+
+ImagesServiceDep = Annotated["ImagesService", Depends(get_images_service)]
+
+
+async def get_countries_service(db: DBDep) -> "CountriesService":
+    """
+    Dependency для получения сервиса стран.
+
+    Args:
+        db: Сессия базы данных
+
+    Returns:
+        CountriesService: Сервис для работы со странами
+    """
+    from src.services.countries import CountriesService
+
+    return CountriesService(db)
+
+
+CountriesServiceDep = Annotated["CountriesService", Depends(get_countries_service)]
+
+
+async def get_cities_service(db: DBDep) -> "CitiesService":
+    """
+    Dependency для получения сервиса городов.
+
+    Args:
+        db: Сессия базы данных
+
+    Returns:
+        CitiesService: Сервис для работы с городами
+    """
+    from src.services.cities import CitiesService
+
+    return CitiesService(db)
+
+
+CitiesServiceDep = Annotated["CitiesService", Depends(get_cities_service)]
 
 
 # ============================================================================

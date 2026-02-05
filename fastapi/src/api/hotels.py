@@ -3,10 +3,10 @@ from datetime import date
 from fastapi import APIRouter, Body, HTTPException, Query
 from fastapi_cache.decorator import cache
 
-from src.api.dependencies import DBDep, PaginationDep
+from src.api.dependencies import DBDep, HotelsServiceDep, PaginationDep
 from src.schemas import MessageResponse
 from src.schemas.hotels import Hotel, HotelPATCH, SchemaHotel, SchemaHotelWithRooms
-from src.utils.api_helpers import get_or_404, handle_delete_operation, handle_validation_error, invalidate_cache
+from src.utils.api_helpers import get_or_404, invalidate_cache
 from src.utils.db_manager import DBManager
 
 router = APIRouter()
@@ -71,7 +71,7 @@ async def get_hotels(
 )
 async def get_hotels_with_available_rooms(
     pagination: PaginationDep,
-    db: DBDep,
+    hotels_service: HotelsServiceDep,
     date_from: date = Query(..., description="Дата начала периода (YYYY-MM-DD)"),
     date_to: date = Query(..., description="Дата окончания периода (YYYY-MM-DD)"),
     hotel_id: int | None = Query(
@@ -96,12 +96,12 @@ async def get_hotels_with_available_rooms(
 
     Args:
         pagination: Параметры пагинации (page и per_page)
-        db: Сессия базы данных
         date_from: Дата начала периода (обязательно)
         date_to: Дата окончания периода (обязательно)
         hotel_id: Опциональный ID отеля. Если указан, возвращается только этот отель.
         title: Опциональный фильтр по названию отеля (частичное совпадение)
         city: Опциональный фильтр по названию города (частичное совпадение, без учета регистра)
+        hotels_service: Сервис для работы с отелями
 
     Returns:
         Список отелей с комнатами и актуальным количеством свободных номеров с учетом пагинации и фильтров
@@ -112,8 +112,7 @@ async def get_hotels_with_available_rooms(
     if date_from >= date_to:
         raise HTTPException(status_code=400, detail="Дата начала периода должна быть раньше даты окончания")
 
-    repo = DBManager.get_hotels_repository(db)
-    hotels = await repo.get_hotels_with_available_rooms(
+    hotels = await hotels_service.get_hotels_with_available_rooms(
         date_from=date_from,
         date_to=date_to,
         page=pagination.page,
@@ -159,7 +158,7 @@ async def get_hotel_by_id(hotel_id: int, db: DBDep) -> SchemaHotel:
     response_model=MessageResponse,
 )
 async def create_hotel(
-    db: DBDep,
+    hotels_service: HotelsServiceDep,
     hotel: Hotel = Body(
         ...,
         openapi_examples={
@@ -180,25 +179,21 @@ async def create_hotel(
     Создать новый отель.
 
     Args:
-        db: Сессия базы данных
         hotel: Данные нового отеля (title, city, address)
+        hotels_service: Сервис для работы с отелями
 
     Returns:
         Словарь со статусом операции {"status": "OK"}
     """
-    async with DBManager.transaction(db):
-        hotels_repo = DBManager.get_hotels_repository(db)
-        try:
-            await hotels_repo.create_hotel_with_validation(
-                title=hotel.title,
-                city_name=hotel.city,
-                address=hotel.address,
-                postal_code=hotel.postal_code,
-                check_in_time=hotel.check_in_time,
-                check_out_time=hotel.check_out_time,
-            )
-        except ValueError as e:
-            raise handle_validation_error(e)
+    async with DBManager.transaction(hotels_service.session):
+        await hotels_service.create_hotel(
+            title=hotel.title,
+            city_name=hotel.city,
+            address=hotel.address,
+            postal_code=hotel.postal_code,
+            check_in_time=hotel.check_in_time,
+            check_out_time=hotel.check_out_time,
+        )
 
     # Инвалидируем кэш отелей
     await invalidate_cache("hotels")
@@ -214,7 +209,7 @@ async def create_hotel(
 )
 async def update_hotel(
     hotel_id: int,
-    db: DBDep,
+    hotels_service: HotelsServiceDep,
     hotel: Hotel = Body(
         ...,
         openapi_examples={
@@ -234,8 +229,8 @@ async def update_hotel(
 
     Args:
         hotel_id: ID отеля для обновления
-        db: Сессия базы данных
         hotel: Данные для обновления (title, city, address обязательны)
+        hotels_service: Сервис для работы с отелями
 
     Returns:
         Словарь со статусом операции {"status": "OK"}
@@ -243,20 +238,16 @@ async def update_hotel(
     Raises:
         HTTPException: 404 если отель с указанным ID не найден
     """
-    async with DBManager.transaction(db):
-        hotels_repo = DBManager.get_hotels_repository(db)
-        try:
-            await hotels_repo.update_hotel_with_validation(
-                hotel_id=hotel_id,
-                title=hotel.title,
-                city_name=hotel.city,
-                address=hotel.address,
-                postal_code=hotel.postal_code,
-                check_in_time=hotel.check_in_time,
-                check_out_time=hotel.check_out_time,
-            )
-        except ValueError as e:
-            raise handle_validation_error(e)
+    async with DBManager.transaction(hotels_service.session):
+        await hotels_service.update_hotel(
+            hotel_id=hotel_id,
+            title=hotel.title,
+            city_name=hotel.city,
+            address=hotel.address,
+            postal_code=hotel.postal_code,
+            check_in_time=hotel.check_in_time,
+            check_out_time=hotel.check_out_time,
+        )
 
     # Инвалидируем кэш отелей
     await invalidate_cache("hotels")
@@ -272,7 +263,7 @@ async def update_hotel(
 )
 async def partial_update_hotel(
     hotel_id: int,
-    db: DBDep,
+    hotels_service: HotelsServiceDep,
     hotel: HotelPATCH = Body(
         ...,
         openapi_examples={
@@ -294,8 +285,8 @@ async def partial_update_hotel(
 
     Args:
         hotel_id: ID отеля для обновления
-        db: Сессия базы данных
         hotel: Данные для обновления (title, city, address - опционально)
+        hotels_service: Сервис для работы с отелями
 
     Returns:
         Словарь со статусом операции {"status": "OK"}
@@ -303,21 +294,17 @@ async def partial_update_hotel(
     Raises:
         HTTPException: 404 если отель с указанным ID не найден
     """
-    async with DBManager.transaction(db):
-        hotels_repo = DBManager.get_hotels_repository(db)
-        try:
-            update_data = hotel.model_dump(exclude_unset=True)
-            await hotels_repo.partial_update_hotel_with_validation(
-                hotel_id=hotel_id,
-                title=update_data.get("title"),
-                city_name=update_data.get("city"),
-                address=update_data.get("address"),
-                postal_code=update_data.get("postal_code"),
-                check_in_time=update_data.get("check_in_time"),
-                check_out_time=update_data.get("check_out_time"),
-            )
-        except ValueError as e:
-            raise handle_validation_error(e)
+    async with DBManager.transaction(hotels_service.session):
+        update_data = hotel.model_dump(exclude_unset=True)
+        await hotels_service.partial_update_hotel(
+            hotel_id=hotel_id,
+            title=update_data.get("title"),
+            city_name=update_data.get("city"),
+            address=update_data.get("address"),
+            postal_code=update_data.get("postal_code"),
+            check_in_time=update_data.get("check_in_time"),
+            check_out_time=update_data.get("check_out_time"),
+        )
 
     # Инвалидируем кэш отелей
     await invalidate_cache("hotels")
@@ -331,13 +318,13 @@ async def partial_update_hotel(
     description="Удаляет отель по указанному ID. Возвращает статус 'OK' при успешном удалении",
     response_model=MessageResponse,
 )
-async def delete_hotel(hotel_id: int, db: DBDep) -> MessageResponse:
+async def delete_hotel(hotel_id: int, hotels_service: HotelsServiceDep) -> MessageResponse:
     """
     Удалить отель.
 
     Args:
         hotel_id: ID отеля для удаления
-        db: Сессия базы данных
+        hotels_service: Сервис для работы с отелями
 
     Returns:
         Словарь со статусом операции {"status": "OK"}
@@ -345,9 +332,12 @@ async def delete_hotel(hotel_id: int, db: DBDep) -> MessageResponse:
     Raises:
         HTTPException: 404 если отель с указанным ID не найден
     """
-    async with DBManager.transaction(db):
-        repo = DBManager.get_hotels_repository(db)
-        await handle_delete_operation(repo.delete, hotel_id, "Отель")
+    async with DBManager.transaction(hotels_service.session):
+        deleted = await hotels_service.delete_hotel(hotel_id)
+        if not deleted:
+            from fastapi import HTTPException
+
+            raise HTTPException(status_code=404, detail="Отель не найден")
 
     # Инвалидируем кэш отелей и номеров (номера удаляются каскадно)
     await invalidate_cache("hotels")

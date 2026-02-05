@@ -46,7 +46,7 @@ services:
     command: >
       sh -c "
         pip install --no-cache-dir -r requirements.txt &&
-        python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload --access-log
+        python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload --no-access-log --reload-exclude 'logs/*' --reload-exclude '*.log' --reload-exclude '__pycache__/*' --reload-exclude '*.pyc'
       "
     networks:
       - booking

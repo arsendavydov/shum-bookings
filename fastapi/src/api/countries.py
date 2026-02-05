@@ -2,10 +2,10 @@ from fastapi import APIRouter, Body, HTTPException, Path, Query
 from fastapi_cache import FastAPICache
 from fastapi_cache.decorator import cache
 
-from src.api.dependencies import DBDep, PaginationDep
+from src.api.dependencies import CountriesServiceDep, DBDep, PaginationDep
 from src.schemas import MessageResponse
 from src.schemas.countries import Country, CountryPATCH, SchemaCountry
-from src.utils.api_helpers import get_or_404, handle_validation_error
+from src.utils.api_helpers import get_or_404
 from src.utils.db_manager import DBManager
 
 COUNTRIES_CACHE_TTL = 300
@@ -76,7 +76,7 @@ async def get_country_by_id(country_id: int = Path(..., description="ID стра
     response_model=MessageResponse,
 )
 async def create_country(
-    db: DBDep,
+    countries_service: CountriesServiceDep,
     country: Country = Body(
         ..., openapi_examples={"1": {"summary": "Создать страну", "value": {"name": "Россия", "iso_code": "RU"}}}
     ),
@@ -86,7 +86,7 @@ async def create_country(
     Инвалидирует кэш стран после создания.
 
     Args:
-        db: Сессия базы данных
+        countries_service: Сервис для работы со странами
         country: Данные новой страны (name, iso_code)
 
     Returns:
@@ -95,12 +95,8 @@ async def create_country(
     Raises:
         HTTPException: 409 если страна с таким названием или ISO кодом уже существует
     """
-    async with DBManager.transaction(db):
-        repo = DBManager.get_countries_repository(db)
-        try:
-            await repo.create_country_with_validation(name=country.name, iso_code=country.iso_code)
-        except ValueError as e:
-            raise handle_validation_error(e)
+    async with DBManager.transaction(countries_service.session):
+        await countries_service.create_country(name=country.name, iso_code=country.iso_code)
 
     # Инвалидируем кэш стран
     await FastAPICache.clear(namespace="countries")
@@ -115,14 +111,16 @@ async def create_country(
     response_model=MessageResponse,
 )
 async def update_country(
-    country_id: int = Path(..., description="ID страны"), db: DBDep = DBDep, country: Country = Body(...)
+    countries_service: CountriesServiceDep,
+    country_id: int = Path(..., description="ID страны"),
+    country: Country = Body(...),
 ) -> MessageResponse:
     """
     Полное обновление страны.
 
     Args:
         country_id: ID страны для обновления
-        db: Сессия базы данных
+        countries_service: Сервис для работы со странами
         country: Данные для обновления (name, iso_code обязательны)
 
     Returns:
@@ -132,14 +130,8 @@ async def update_country(
         HTTPException: 404 если страна с указанным ID не найдена
         HTTPException: 409 если страна с таким названием или ISO кодом уже существует
     """
-    async with DBManager.transaction(db):
-        repo = DBManager.get_countries_repository(db)
-        try:
-            await repo.update_country_with_validation(
-                country_id=country_id, name=country.name, iso_code=country.iso_code
-            )
-        except ValueError as e:
-            raise handle_validation_error(e)
+    async with DBManager.transaction(countries_service.session):
+        await countries_service.update_country(country_id=country_id, name=country.name, iso_code=country.iso_code)
 
     # Инвалидируем кэш стран
     await FastAPICache.clear(namespace="countries")
@@ -154,14 +146,16 @@ async def update_country(
     response_model=MessageResponse,
 )
 async def partial_update_country(
-    country_id: int = Path(..., description="ID страны"), db: DBDep = DBDep, country: CountryPATCH = Body(...)
+    countries_service: CountriesServiceDep,
+    country_id: int = Path(..., description="ID страны"),
+    country: CountryPATCH = Body(...),
 ) -> MessageResponse:
     """
     Частичное обновление страны.
 
     Args:
         country_id: ID страны для обновления
-        db: Сессия базы данных
+        countries_service: Сервис для работы со странами
         country: Данные для обновления (name, iso_code опциональны)
 
     Returns:
@@ -171,14 +165,10 @@ async def partial_update_country(
         HTTPException: 404 если страна с указанным ID не найдена
         HTTPException: 409 если страна с таким названием или ISO кодом уже существует
     """
-    async with DBManager.transaction(db):
-        repo = DBManager.get_countries_repository(db)
-        try:
-            await repo.partial_update_country_with_validation(
-                country_id=country_id, name=country.name, iso_code=country.iso_code
-            )
-        except ValueError as e:
-            raise handle_validation_error(e)
+    async with DBManager.transaction(countries_service.session):
+        await countries_service.partial_update_country(
+            country_id=country_id, name=country.name, iso_code=country.iso_code
+        )
 
     # Инвалидируем кэш стран
     await FastAPICache.clear(namespace="countries")

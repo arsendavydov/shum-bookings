@@ -19,7 +19,7 @@ class BookingsRepository(BaseRepository[BookingsOrm]):
     для работы с бронированиями.
     """
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         """
         Инициализация репозитория бронирований.
 
@@ -130,68 +130,6 @@ class BookingsRepository(BaseRepository[BookingsOrm]):
 
         # Проверяем, есть ли свободные номера
         return booked_count < room.quantity
-
-    async def create_booking_with_validation(
-        self, room_id: int, user_id: int, date_from: date, date_to: date
-    ) -> SchemaBooking:
-        """
-        Создать бронирование с полной валидацией.
-
-        Выполняет все проверки и создает бронирование:
-        - Проверяет существование номера
-        - Проверяет корректность дат
-        - Проверяет доступность номера (с учетом quantity)
-        - Рассчитывает цену
-        - Создает бронирование
-
-        Args:
-            room_id: ID номера
-            user_id: ID пользователя
-            date_from: Дата заезда
-            date_to: Дата выезда
-
-        Returns:
-            Созданное бронирование (Pydantic схема)
-
-        Raises:
-            ValueError: Если номер не найден, даты некорректны или номер недоступен
-        """
-        # Проверяем существование номера
-        room_query = select(RoomsOrm).where(RoomsOrm.id == room_id)
-        room_result = await self.session.execute(room_query)
-        room = room_result.scalar_one_or_none()
-
-        if room is None:
-            raise ValueError("Номер не найден")
-
-        # Проверяем корректность дат
-        if date_from >= date_to:
-            raise ValueError("Дата заезда должна быть раньше даты выезда")
-
-        # Проверяем доступность номера (с учетом quantity)
-        is_available = await self.is_room_available(room_id=room_id, date_from=date_from, date_to=date_to)
-
-        if not is_available:
-            raise ValueError("Все номера данного типа уже забронированы на указанные даты")
-
-        # Рассчитываем общую цену
-        try:
-            total_price = BookingsOrm.calculate_total_price(
-                room_price_per_night=room.price, date_from=date_from, date_to=date_to
-            )
-        except ValueError as e:
-            raise ValueError(str(e))
-
-        # Создаем бронирование
-        booking_data = {
-            "room_id": room_id,
-            "user_id": user_id,
-            "date_from": date_from,
-            "date_to": date_to,
-            "price": total_price,
-        }
-
-        return await self.create(**booking_data)
 
     async def get_paginated(self, page: int, per_page: int, user_id: int | None = None) -> list[SchemaBooking]:
         """

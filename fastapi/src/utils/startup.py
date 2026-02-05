@@ -15,7 +15,7 @@ from src.utils.migrations import apply_migrations_for_current_db, setup_test_dat
 logger = get_logger(__name__)
 
 
-async def startup_handler():
+async def startup_handler() -> None:
     """Обработчик запуска приложения."""
     setup_test_database()
     await apply_migrations_for_current_db()
@@ -50,10 +50,32 @@ async def startup_handler():
     FastAPICache.init(RedisBackend(redis_cache_client), prefix="fastapi-cache")
     logger.info("FastAPI Cache инициализирован с Redis!")
 
+    logger.info("Проверка подключения Celery к broker (Redis)...")
+    try:
+        from src.tasks.celery_app import celery_app
+
+        # Проверяем, что Celery может подключиться к broker
+        # inspect() требует запущенного worker, но мы проверяем доступность broker
+        inspector = celery_app.control.inspect()
+        if inspector is None:
+            # Если нет активных workers, это нормально - проверяем только broker
+            # Проверяем доступность через ping к Redis (уже проверено выше)
+            logger.info("Celery broker (Redis) доступен. Worker может быть не запущен - это нормально.")
+        else:
+            # Если есть активные workers, проверяем их доступность
+            active_workers = inspector.active()
+            if active_workers:
+                logger.info(f"Celery workers активны: {list(active_workers.keys())}")
+            else:
+                logger.warning("Celery broker доступен, но активные workers не найдены")
+    except Exception as e:
+        logger.warning(f"Не удалось проверить Celery broker: {e}. Это может быть нормально, если worker не запущен.")
+        # Не поднимаем исключение, т.к. Celery worker может быть запущен отдельно
+
     cleanup_temp_files()
 
 
-async def shutdown_handler():
+async def shutdown_handler() -> None:
     """Обработчик остановки приложения."""
     logger.info("Закрытие соединений с базой данных...")
     try:

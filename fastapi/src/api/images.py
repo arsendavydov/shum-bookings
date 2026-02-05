@@ -2,16 +2,15 @@ import asyncio
 import os
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
-from fastapi import Path as PathParam
+from fastapi import APIRouter, File, HTTPException, Path as PathParam, UploadFile
 from PIL import Image as PILImage
 
-from src.api.dependencies import DBDep
+from src.api.dependencies import ImagesServiceDep
 from src.config import settings
 from src.schemas import MessageResponse
 from src.schemas.images import ImageUploadResponse, SchemaImage
+from src.services.images import ImagesService
 from src.tasks.tasks import process_image
-from src.utils.api_helpers import get_or_404
 from src.utils.db_manager import DBManager
 from src.utils.logger import get_logger
 
@@ -59,8 +58,8 @@ async def upload_image(
 
     # Проверяем существование отеля перед сохранением файла
     async with DBManager() as db:
-        hotels_repo = DBManager.get_hotels_repository(db)
-        await get_or_404(hotels_repo.get_by_id, hotel_id, "Отель")
+        images_service = ImagesService(db)
+        await images_service.validate_hotel_exists(hotel_id)
 
     # Сохраняем файл и проверяем размер синхронно в отдельном потоке ДО запуска Celery задачи
     # Это позволяет вернуть ошибку 400 сразу, если изображение слишком маленькое
@@ -139,14 +138,15 @@ async def upload_image(
     response_model=list[SchemaImage],
 )
 async def get_hotel_images(
-    hotel_id: int = PathParam(..., description="ID отеля"), db: DBDep = DBDep
+    images_service: ImagesServiceDep,
+    hotel_id: int = PathParam(..., description="ID отеля"),
 ) -> list[SchemaImage]:
     """
     Получить список изображений отеля.
 
     Args:
         hotel_id: ID отеля
-        db: Сессия базы данных
+        images_service: Сервис для работы с изображениями
 
     Returns:
         Список изображений отеля
@@ -155,12 +155,13 @@ async def get_hotel_images(
         HTTPException: 404 если отель не найден
     """
     # Проверяем существование отеля
-    hotels_repo = DBManager.get_hotels_repository(db)
-    await get_or_404(hotels_repo.get_by_id, hotel_id, "Отель")
+    try:
+        await images_service.validate_hotel_exists(hotel_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
     # Получаем изображения
-    images_repo = DBManager.get_images_repository(db)
-    images = await images_repo.get_by_hotel_id(hotel_id)
+    images = await images_service.images_repo.get_by_hotel_id(hotel_id)
 
     return images
 
@@ -172,7 +173,8 @@ async def get_hotel_images(
     response_model=MessageResponse,
 )
 async def delete_image(
-    image_id: int = PathParam(..., description="ID изображения"), db: DBDep = DBDep
+    images_service: ImagesServiceDep,
+    image_id: int = PathParam(..., description="ID изображения"),
 ) -> MessageResponse:
     """
     Удалить изображение.
@@ -180,7 +182,7 @@ async def delete_image(
 
     Args:
         image_id: ID изображения для удаления
-        db: Сессия базы данных
+        images_service: Сервис для работы с изображениями
 
     Returns:
         Словарь со статусом операции {"status": "OK"}
@@ -188,33 +190,8 @@ async def delete_image(
     Raises:
         HTTPException: 404 если изображение с указанным ID не найдено
     """
-    # Проверяем существование изображения
-    images_repo = DBManager.get_images_repository(db)
-    image = await images_repo.get_by_id(image_id)
-    if image is None:
-        raise HTTPException(status_code=404, detail="Изображение не найдено")
-
-    # Удаляем файлы ресайзов с диска
-    deleted_files = 0
-    for width in [200, 500, 1000]:
-        # Ищем файлы по паттерну {image_id}_{width}w_*
-        pattern = f"{image_id}_{width}w_*"
-        for file_path in IMAGES_DIR.glob(pattern):
-            try:
-                if file_path.exists():
-                    os.remove(file_path)
-                    deleted_files += 1
-            except Exception as e:
-                # Логируем ошибку, но продолжаем удаление
-                logger.warning(f"Не удалось удалить файл {file_path}: {e}")
-
-    # Удаляем запись из БД
-    async with DBManager.transaction(db):
-        try:
-            deleted = await images_repo.delete(image_id)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-
+    async with DBManager.transaction(images_service.session):
+        deleted = await images_service.delete_image(image_id)
         if not deleted:
             raise HTTPException(status_code=404, detail="Изображение не найдено")
 

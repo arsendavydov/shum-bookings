@@ -8,7 +8,9 @@ class RedisManager:
 
     _client: Redis | None = None
 
-    def __init__(self, host: str = None, port: int = None, db: int = None, password: str = None):
+    def __init__(
+        self, host: str | None = None, port: int | None = None, db: int | None = None, password: str | None = None
+    ) -> None:
         """Инициализация RedisManager с параметрами подключения."""
         self.host = host or settings.REDIS_HOST
         self.port = port or settings.REDIS_PORT

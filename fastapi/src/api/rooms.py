@@ -4,8 +4,7 @@ from fastapi import APIRouter, Body, HTTPException, Query
 from fastapi_cache import FastAPICache
 from fastapi_cache.decorator import cache
 
-from src.api.dependencies import DBDep, PaginationDep
-from src.api.dependencies import RoomsRepositoryDepWrite
+from src.api.dependencies import DBDep, PaginationDep, RoomsServiceDep
 from src.schemas import MessageResponse
 from src.schemas.rooms import Room, RoomPATCH, SchemaRoom, SchemaRoomAvailable
 from src.utils.api_helpers import get_or_404
@@ -15,58 +14,6 @@ router = APIRouter()
 
 # Время жизни кэша для номеров (явно задано)
 ROOMS_CACHE_TTL = 300  # 5 минут
-
-
-async def validate_and_process_facilities(
-    db: DBDep,
-    room_id: int,
-    facility_ids: list[int] | None,
-    rooms_repo: RoomsRepositoryDepWrite,
-    is_update: bool = False,
-) -> None:
-    """
-    Валидировать существование удобств и обработать их для комнаты.
-
-    Args:
-        db: Сессия базы данных
-        room_id: ID комнаты
-        facility_ids: Список ID удобств для обработки (может быть None)
-        rooms_repo: Репозиторий комнат
-        is_update: Если True, использует эффективное обновление. Если False, добавляет новые связи.
-
-    Raises:
-        HTTPException: 404 если какое-либо удобство не найдено
-        HTTPException: 400 если произошла ошибка при обработке
-    """
-    # Если facility_ids is None, ничего не делаем (оставляем существующие связи)
-    # Если facility_ids = [], это означает очистку всех связей (для PUT/PATCH)
-    if facility_ids is None:
-        return
-
-    # Если передан пустой список и это обновление, очищаем все связи
-    if is_update and len(facility_ids) == 0:
-        await rooms_repo.update_room_facilities(room_id, [])
-        return
-
-    facilities_repo = DBManager.get_facilities_repository(db)
-
-    # Проверяем существование всех удобств
-    for facility_id in facility_ids:
-        facility = await facilities_repo.get_by_id(facility_id)
-        if facility is None:
-            raise HTTPException(status_code=404, detail=f"Удобство с ID {facility_id} не найдено")
-
-    # Обрабатываем связи
-    try:
-        if is_update:
-            # Эффективное обновление: удаляет только отсутствующие, добавляет только новые
-            await rooms_repo.update_room_facilities(room_id, facility_ids)
-        else:
-            # Добавление новых связей
-            for facility_id in facility_ids:
-                await rooms_repo.add_facility(room_id, facility_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get(
@@ -191,14 +138,14 @@ async def get_room_by_id(hotel_id: int, room_id: int, db: DBDep) -> SchemaRoom:
     description="Создает новый номер в указанном отеле. ID генерируется автоматически. Можно сразу указать список ID удобств для добавления к номеру.",
     response_model=MessageResponse,
 )
-async def create_room(hotel_id: int, db: DBDep, room: Room = Body(...)) -> MessageResponse:
+async def create_room(hotel_id: int, rooms_service: RoomsServiceDep, room: Room = Body(...)) -> MessageResponse:
     """
     Создать новый номер в отеле.
 
     Args:
         hotel_id: ID отеля
-        db: Сессия базы данных
         room: Данные нового номера (включая опциональный список facility_ids)
+        rooms_service: Сервис для работы с номерами
 
     Returns:
         Словарь со статусом операции {"status": "OK"}
@@ -207,27 +154,12 @@ async def create_room(hotel_id: int, db: DBDep, room: Room = Body(...)) -> Messa
         HTTPException: 404 если отель не найден или удобство не найдено
         HTTPException: 400 если передан невалидный ID удобства
     """
-    async with DBManager.transaction(db):
-        hotels_repo = DBManager.get_hotels_repository(db)
-        hotel = await hotels_repo.get_by_id(hotel_id)
-        if hotel is None:
-            raise HTTPException(status_code=404, detail="Отель не найден")
-
-        repo = DBManager.get_rooms_repository(db)
-
+    async with DBManager.transaction(rooms_service.session):
         # Извлекаем facility_ids перед созданием комнаты
         facility_ids = room.facility_ids
         room_data = room.model_dump(exclude={"facility_ids"}, exclude_none=True)
-        room_data["hotel_id"] = hotel_id
 
-        # Создаем комнату
-        created_room_schema = await repo.create(**room_data)
-        room_id = created_room_schema.id
-
-        # Если передан список удобств, добавляем их к комнате
-        await validate_and_process_facilities(
-            db=db, room_id=room_id, facility_ids=facility_ids, rooms_repo=repo, is_update=False
-        )
+        await rooms_service.create_room(hotel_id=hotel_id, room_data=room_data, facility_ids=facility_ids)
 
     # Инвалидируем кэш номеров
     await FastAPICache.clear(namespace="rooms")
@@ -241,14 +173,16 @@ async def create_room(hotel_id: int, db: DBDep, room: Room = Body(...)) -> Messa
     description="Полностью обновляет информацию о номере по указанному ID. Номер должен принадлежать указанному отелю. Если передан facility_ids, эффективно обновляет связи удобств: удаляет только отсутствующие в новом списке, добавляет только новые, оставляет нетронутыми существующие.",
     response_model=MessageResponse,
 )
-async def update_room(hotel_id: int, room_id: int, db: DBDep, room: Room = Body(...)) -> MessageResponse:
+async def update_room(
+    hotel_id: int, room_id: int, rooms_service: RoomsServiceDep, room: Room = Body(...)
+) -> MessageResponse:
     """
     Полное обновление номера.
 
     Args:
         hotel_id: ID отеля
         room_id: ID номера для обновления
-        db: Сессия базы данных
+        rooms_service: Сервис для работы с номерами
         room: Данные для обновления (включая опциональный список facility_ids)
 
     Returns:
@@ -258,35 +192,14 @@ async def update_room(hotel_id: int, room_id: int, db: DBDep, room: Room = Body(
         HTTPException: 404 если отель или номер не найдены, или номер не принадлежит отелю
         HTTPException: 404 если удобство не найдено
     """
-    async with DBManager.transaction(db):
-        hotels_repo = DBManager.get_hotels_repository(db)
-        await get_or_404(hotels_repo.get_by_id, hotel_id, "Отель")
-
-        repo = DBManager.get_rooms_repository(db)
-        existing_room = await get_or_404(repo.get_by_id, room_id, "Номер")
-
-        if existing_room.hotel_id != hotel_id:
-            raise HTTPException(status_code=404, detail="Номер не принадлежит указанному отелю")
-
+    async with DBManager.transaction(rooms_service.session):
         # Извлекаем facility_ids перед обновлением комнаты
         facility_ids = room.facility_ids
         room_data = room.model_dump(exclude={"facility_ids"}, exclude_none=True)
-        room_data["hotel_id"] = hotel_id
 
-        try:
-            updated_room = await repo.edit(id=room_id, **room_data)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-
-        if updated_room is None:
-            raise HTTPException(status_code=404, detail="Номер не найден")
-
-        # Обновляем связи удобств (если facility_ids передан, даже если это пустой список)
-        # Если facility_ids is None, оставляем существующие связи без изменений
-        if facility_ids is not None:
-            await validate_and_process_facilities(
-                db=db, room_id=room_id, facility_ids=facility_ids, rooms_repo=repo, is_update=True
-            )
+        await rooms_service.update_room(
+            hotel_id=hotel_id, room_id=room_id, room_data=room_data, facility_ids=facility_ids
+        )
 
     # Инвалидируем кэш номеров
     await FastAPICache.clear(namespace="rooms")
@@ -300,15 +213,17 @@ async def update_room(hotel_id: int, room_id: int, db: DBDep, room: Room = Body(
     description="Частично обновляет информацию о номере по указанному ID. Номер должен принадлежать указанному отелю. Если передан facility_ids, эффективно обновляет связи удобств: удаляет только отсутствующие в новом списке, добавляет только новые, оставляет нетронутыми существующие.",
     response_model=MessageResponse,
 )
-async def partial_update_room(hotel_id: int, room_id: int, db: DBDep, room: RoomPATCH = Body(...)) -> MessageResponse:
+async def partial_update_room(
+    hotel_id: int, room_id: int, rooms_service: RoomsServiceDep, room: RoomPATCH = Body(...)
+) -> MessageResponse:
     """
     Частичное обновление номера.
 
     Args:
         hotel_id: ID отеля
         room_id: ID номера для обновления
-        db: Сессия базы данных
         room: Данные для обновления (опционально, включая facility_ids)
+        rooms_service: Сервис для работы с номерами
 
     Returns:
         Словарь со статусом операции {"status": "OK"}
@@ -317,32 +232,10 @@ async def partial_update_room(hotel_id: int, room_id: int, db: DBDep, room: Room
         HTTPException: 404 если отель или номер не найдены, или номер не принадлежит отелю
         HTTPException: 404 если удобство не найдено
     """
-    async with DBManager.transaction(db):
-        hotels_repo = DBManager.get_hotels_repository(db)
-        hotel = await hotels_repo.get_by_id(hotel_id)
-        if hotel is None:
-            raise HTTPException(status_code=404, detail="Отель не найден")
-
-        repo = DBManager.get_rooms_repository(db)
-        existing_room = await repo.get_by_id(room_id)
-        if existing_room is None:
-            raise HTTPException(status_code=404, detail="Номер не найден")
-
-        if existing_room.hotel_id != hotel_id:
-            raise HTTPException(status_code=404, detail="Номер не принадлежит указанному отелю")
-
-        # Извлекаем facility_ids перед обновлением комнаты
-        facility_ids = room.facility_ids
+    async with DBManager.transaction(rooms_service.session):
         update_data = room.model_dump(exclude={"facility_ids"}, exclude_unset=True)
 
-        # Обновляем только переданные поля (кроме facility_ids)
-        if update_data:
-            await repo.update(id=room_id, **update_data)
-
-        # Если передан список удобств, эффективно обновляем связи
-        await validate_and_process_facilities(
-            db=db, room_id=room_id, facility_ids=facility_ids, rooms_repo=repo, is_update=True
-        )
+        await rooms_service.partial_update_room(hotel_id=hotel_id, room_id=room_id, room_data=update_data)
 
     # Инвалидируем кэш номеров
     await FastAPICache.clear(namespace="rooms")
@@ -356,14 +249,14 @@ async def partial_update_room(hotel_id: int, room_id: int, db: DBDep, room: Room
     description="Удаляет номер по указанному ID. Номер должен принадлежать указанному отелю.",
     response_model=MessageResponse,
 )
-async def delete_room(hotel_id: int, room_id: int, db: DBDep) -> MessageResponse:
+async def delete_room(hotel_id: int, room_id: int, rooms_service: RoomsServiceDep) -> MessageResponse:
     """
     Удалить номер.
 
     Args:
         hotel_id: ID отеля
         room_id: ID номера для удаления
-        db: Сессия базы данных
+        rooms_service: Сервис для работы с номерами
 
     Returns:
         Словарь со статусом операции {"status": "OK"}
@@ -371,25 +264,8 @@ async def delete_room(hotel_id: int, room_id: int, db: DBDep) -> MessageResponse
     Raises:
         HTTPException: 404 если отель или номер не найдены, или номер не принадлежит отелю
     """
-    async with DBManager.transaction(db):
-        hotels_repo = DBManager.get_hotels_repository(db)
-        hotel = await hotels_repo.get_by_id(hotel_id)
-        if hotel is None:
-            raise HTTPException(status_code=404, detail="Отель не найден")
-
-        repo = DBManager.get_rooms_repository(db)
-        existing_room = await repo.get_by_id(room_id)
-        if existing_room is None:
-            raise HTTPException(status_code=404, detail="Номер не найден")
-
-        if existing_room.hotel_id != hotel_id:
-            raise HTTPException(status_code=404, detail="Номер не принадлежит указанному отелю")
-
-        try:
-            deleted = await repo.delete(room_id)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-
+    async with DBManager.transaction(rooms_service.session):
+        deleted = await rooms_service.delete_room(hotel_id=hotel_id, room_id=room_id)
         if not deleted:
             raise HTTPException(status_code=404, detail="Номер не найден")
 

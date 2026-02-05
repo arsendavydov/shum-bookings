@@ -3,7 +3,7 @@ import time
 import httpx
 import pytest
 
-from tests.api_tests import TEST_EXAMPLE_EMAIL_DOMAIN, TEST_PASSWORD
+from tests.api_tests import BASE_URL, TEST_EXAMPLE_EMAIL_DOMAIN, TEST_PASSWORD
 
 
 @pytest.mark.auth
@@ -291,7 +291,7 @@ class TestAuth:
         unique_email = f"{test_prefix}_me_header_{int(time.time() * 1000)}@{TEST_EXAMPLE_EMAIL_DOMAIN}"
         password = TEST_PASSWORD
 
-        test_client = httpx.Client(base_url="http://localhost:8000", timeout=10.0)
+        test_client = httpx.Client(base_url=BASE_URL, timeout=10.0)
 
         register_response = test_client.post("/auth/register", json={"email": unique_email, "password": password})
         assert register_response.status_code == 201
@@ -302,7 +302,7 @@ class TestAuth:
         assert login_response.status_code == 200
         token = login_response.json()["access_token"]
 
-        clean_client = httpx.Client(base_url="http://localhost:8000", timeout=10.0)
+        clean_client = httpx.Client(base_url=BASE_URL, timeout=10.0)
         me_response = clean_client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
         assert me_response.status_code == 200
         me_data = me_response.json()
@@ -315,7 +315,7 @@ class TestAuth:
 
     def test_get_current_user_no_token(self, client):
         """Получение текущего пользователя без токена"""
-        test_client = httpx.Client(base_url="http://localhost:8000", timeout=10.0)
+        test_client = httpx.Client(base_url=BASE_URL, timeout=10.0)
         response = test_client.get("/auth/me")
         assert response.status_code == 401
         assert "Токен доступа не предоставлен" in response.json()["detail"]
@@ -323,7 +323,7 @@ class TestAuth:
 
     def test_get_current_user_invalid_token(self, client):
         """Получение текущего пользователя с невалидным токеном"""
-        test_client = httpx.Client(base_url="http://localhost:8000", timeout=10.0)
+        test_client = httpx.Client(base_url=BASE_URL, timeout=10.0)
         response = test_client.get("/auth/me", headers={"Authorization": "Bearer invalid_token_12345"})
         assert response.status_code == 401
         assert "Токен невалиден или истек" in response.json()["detail"]
@@ -331,7 +331,7 @@ class TestAuth:
 
     def test_get_current_user_malformed_token(self, client):
         """Получение текущего пользователя с неправильным форматом токена"""
-        test_client = httpx.Client(base_url="http://localhost:8000", timeout=10.0)
+        test_client = httpx.Client(base_url=BASE_URL, timeout=10.0)
         response = test_client.get("/auth/me", headers={"Authorization": "InvalidFormat token123"})
         assert response.status_code == 401
         assert "Токен доступа не предоставлен" in response.json()["detail"]
@@ -358,7 +358,7 @@ class TestAuth:
     )
     def test_get_current_user_invalid_token_formats(self, client, invalid_token, description, expect_httpx_error):
         """Получение текущего пользователя с различными невалидными форматами токена"""
-        test_client = httpx.Client(base_url="http://localhost:8000", timeout=10.0)
+        test_client = httpx.Client(base_url=BASE_URL, timeout=10.0)
 
         if expect_httpx_error:
             with pytest.raises((httpx.LocalProtocolError, UnicodeEncodeError)):
@@ -399,7 +399,7 @@ class TestAuth:
 
     def test_logout_user_no_auth(self, client):
         """Выход без авторизации"""
-        test_client = httpx.Client(base_url="http://localhost:8000", timeout=10.0)
+        test_client = httpx.Client(base_url=BASE_URL, timeout=10.0)
         response = test_client.post("/auth/logout")
         assert response.status_code == 401
         assert "Токен доступа не предоставлен" in response.json()["detail"]
@@ -424,7 +424,7 @@ class TestAuth:
     )
     def test_logout_user_invalid_token_formats(self, client, invalid_token, description, expect_httpx_error):
         """Выход с различными невалидными форматами токена"""
-        test_client = httpx.Client(base_url="http://localhost:8000", timeout=10.0)
+        test_client = httpx.Client(base_url=BASE_URL, timeout=10.0)
 
         if expect_httpx_error:
             with pytest.raises((httpx.LocalProtocolError, UnicodeEncodeError)):
