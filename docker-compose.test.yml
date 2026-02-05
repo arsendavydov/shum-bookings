@@ -19,6 +19,7 @@ services:
       - .test.env
     environment:
       - PYTHONUNBUFFERED=1
+      - ENABLE_METRICS_IN_TESTS=true
 
 volumes:
   temp_files_volume:

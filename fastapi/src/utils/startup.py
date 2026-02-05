@@ -9,6 +9,8 @@ from redis.asyncio import Redis as AsyncRedis
 from src import redis_manager
 from src.config import settings
 from src.db import check_connection, close_engine
+from src.metrics.helpers import should_collect_metrics
+from src.metrics.setup import update_system_metrics
 from src.utils.logger import get_logger
 from src.utils.migrations import apply_migrations_for_current_db, setup_test_database
 
@@ -39,6 +41,11 @@ async def startup_handler() -> None:
     except Exception as e:
         logger.error(f"Ошибка подключения к Redis: {e}", exc_info=True)
         raise
+    
+    # Инициализируем системные метрики при старте приложения
+    if should_collect_metrics():
+        update_system_metrics()
+        logger.info("Системные метрики инициализированы")
 
     redis_cache_client = AsyncRedis(
         host=settings.REDIS_HOST,

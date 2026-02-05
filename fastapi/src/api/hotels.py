@@ -4,8 +4,8 @@ from fastapi import APIRouter, Body, HTTPException, Query
 from fastapi_cache.decorator import cache
 
 from src.api.dependencies import DBDep, HotelsServiceDep, PaginationDep
-from src.config import settings
 from src.metrics.collectors import hotels_created_total
+from src.metrics.helpers import should_collect_metrics
 from src.schemas import MessageResponse
 from src.schemas.hotels import Hotel, HotelPATCH, SchemaHotel, SchemaHotelWithRooms
 from src.utils.api_helpers import get_or_404, invalidate_cache
@@ -199,6 +199,10 @@ async def create_hotel(
 
     # Инвалидируем кэш отелей
     await invalidate_cache("hotels")
+
+    # Метрика создания отеля
+    if should_collect_metrics():
+        hotels_created_total.inc()
 
     return MessageResponse(status="OK")
 

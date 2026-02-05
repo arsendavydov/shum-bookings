@@ -11,6 +11,7 @@ from src.metrics.collectors import (
     app_info,
     app_uptime_seconds,
 )
+from src.metrics.helpers import should_collect_metrics
 
 # Время запуска приложения для расчета uptime
 _app_start_time = datetime.now(UTC)
@@ -23,7 +24,7 @@ def setup_prometheus_instrumentator(app) -> None:
     Args:
         app: Экземпляр FastAPI приложения
     """
-    if settings.DB_NAME == "test":
+    if not should_collect_metrics():
         return
 
     instrumentator = Instrumentator(
@@ -44,7 +45,7 @@ def update_system_metrics() -> None:
     Примечание: process_resident_memory_bytes и process_cpu_seconds_total
     обновляются автоматически prometheus-fastapi-instrumentator.
     """
-    if settings.DB_NAME == "test":
+    if not should_collect_metrics():
         return
 
     try:

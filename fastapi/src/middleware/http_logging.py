@@ -9,6 +9,7 @@ from starlette.types import ASGIApp
 
 from src.config import settings
 from src.metrics.collectors import api_errors_total, api_request_duration_seconds, api_requests_total
+from src.metrics.helpers import should_collect_metrics
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -46,7 +47,7 @@ class HTTPLoggingMiddleware(BaseHTTPMiddleware):
             # Логируем запрос даже если произошла ошибка
             error_type = type(exc).__name__
             logger.error(f"Ошибка при обработке запроса {method} {path}", exc_info=True)
-            if settings.DB_NAME != "test":
+            if should_collect_metrics():
                 api_errors_total.labels(endpoint=endpoint, error_type=error_type).inc()
             raise exc
         finally:
@@ -57,8 +58,8 @@ class HTTPLoggingMiddleware(BaseHTTPMiddleware):
             logger.info(log_message)
             logging.getLogger().info(log_message)
             
-            # Собираем метрики (только в основном режиме)
-            if settings.DB_NAME != "test":
+            # Собираем метрики
+            if should_collect_metrics():
                 api_requests_total.labels(endpoint=endpoint, method=method, status=status_code).inc()
                 api_request_duration_seconds.labels(endpoint=endpoint, method=method).observe(process_time)
 

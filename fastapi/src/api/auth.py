@@ -8,6 +8,7 @@ from src.metrics.collectors import (
     auth_refresh_tokens_total,
     auth_registrations_total,
 )
+from src.metrics.helpers import should_collect_metrics
 from src.middleware.rate_limiting import rate_limit
 from src.schemas.common import MessageResponse
 from src.schemas.users import RefreshTokenRequest, SchemaUser, TokenResponse, UserRequestLogin, UserRequestRegister, UserResponse
@@ -84,7 +85,8 @@ async def register_user(
         user = await users_service.register_user(user_register_data)
 
     # Метрика регистрации
-    auth_registrations_total.inc()
+    if should_collect_metrics():
+        auth_registrations_total.inc()
 
     # Преобразуем SchemaUser в UserResponse (они идентичны, но для ясности используем UserResponse)
     return UserResponse.model_validate(user)
@@ -135,14 +137,16 @@ async def login_user(
     user_orm = await repo.get_orm_by_email(login_data.email)
 
     if user_orm is None:
-        auth_logins_total.labels(status="failure").inc()
-        auth_failed_attempts_total.labels(reason="user_not_found").inc()
+        if should_collect_metrics():
+            auth_logins_total.labels(status="failure").inc()
+            auth_failed_attempts_total.labels(reason="user_not_found").inc()
         raise HTTPException(status_code=401, detail="Пользователь с таким email не найден")
 
     # Проверка пароля
     if not user_orm.hashed_password or not auth_service.verify_password(login_data.password, user_orm.hashed_password):
-        auth_logins_total.labels(status="failure").inc()
-        auth_failed_attempts_total.labels(reason="invalid_password").inc()
+        if should_collect_metrics():
+            auth_logins_total.labels(status="failure").inc()
+            auth_failed_attempts_total.labels(reason="invalid_password").inc()
         raise HTTPException(status_code=401, detail="Неверный пароль")
 
     # Создание JWT токена
@@ -169,7 +173,8 @@ async def login_user(
     )
 
     # Метрика успешного входа
-    auth_logins_total.labels(status="success").inc()
+    if should_collect_metrics():
+        auth_logins_total.labels(status="success").inc()
 
     # Возвращаем токены в JSON ответе
     return TokenResponse(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
@@ -248,7 +253,8 @@ async def refresh_token(
     refresh_token_orm = await refresh_token_repo.get_by_token(refresh_data.refresh_token)
     
     if refresh_token_orm is None:
-        auth_refresh_tokens_total.labels(status="failure").inc()
+        if should_collect_metrics():
+            auth_refresh_tokens_total.labels(status="failure").inc()
         raise HTTPException(status_code=401, detail="Невалидный или истекший refresh токен")
     
     # Получаем пользователя
@@ -283,7 +289,8 @@ async def refresh_token(
     )
     
     # Метрика успешного обновления токена
-    auth_refresh_tokens_total.labels(status="success").inc()
+    if should_collect_metrics():
+        auth_refresh_tokens_total.labels(status="success").inc()
     
     return TokenResponse(access_token=access_token, refresh_token=new_refresh_token, token_type="bearer")
 

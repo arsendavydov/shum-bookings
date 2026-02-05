@@ -4,8 +4,8 @@ from typing import Any, TypeVar
 from fastapi import HTTPException
 from fastapi_cache import FastAPICache
 
-from src.config import settings
 from src.metrics.collectors import cache_operations_total
+from src.metrics.helpers import should_collect_metrics
 
 T = TypeVar("T")
 
@@ -41,7 +41,7 @@ async def invalidate_cache(namespace: str) -> None:
     Args:
         namespace: Namespace кэша для очистки (например, "hotels", "rooms", "cities")
     """
-    if settings.DB_NAME != "test":
+    if should_collect_metrics():
         cache_operations_total.labels(operation="delete", namespace=namespace).inc()
     await FastAPICache.clear(namespace=namespace)
 

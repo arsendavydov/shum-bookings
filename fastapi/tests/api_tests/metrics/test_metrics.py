@@ -1,11 +1,14 @@
 """
 Тесты для проверки метрик Prometheus.
 """
+import os
 import random
 import re
 import time
 
 import pytest
+
+from tests.api_tests.metrics.metrics_parser import get_metric_sum, get_metric_value, parse_metrics
 
 # Используем фикстуру client из conftest.py (scope="session")
 
@@ -15,6 +18,9 @@ def setup_test_helpers():
     """Настройка вспомогательных переменных для тестов."""
     pytest.current_time = int(time.time())
     pytest.random_int = random.randint(1000, 9999)
+    
+    # Примечание: ENABLE_METRICS_IN_TESTS устанавливается в docker-compose.test.yml
+    # для включения метрик в тестовом контейнере
 
 
 def test_metrics_endpoint_exists(client):
@@ -47,8 +53,12 @@ def test_http_metrics_present(client):
 
 
 def test_auth_metrics_registration(client):
-    """Проверить, что метрики регистрации собираются."""
+    """Проверить, что метрики регистрации собираются и инкрементируются."""
     unique_email = f"test_metrics_{pytest.current_time}_{pytest.random_int}@example.com"
+    
+    # Получаем начальное значение метрики
+    initial_metrics = parse_metrics(client.get("/metrics").text)
+    initial_value = get_metric_value(initial_metrics, "auth_registrations_total") or 0.0
     
     response = client.post(
         "/auth/register",
@@ -60,17 +70,21 @@ def test_auth_metrics_registration(client):
     
     assert response.status_code in [201, 409]
     
+    # Получаем метрики после регистрации
     metrics_response = client.get("/metrics")
     assert metrics_response.status_code == 200
     
-    metrics_text = metrics_response.text
+    metrics = parse_metrics(metrics_response.text)
     
     if response.status_code == 201:
-        assert "auth_registrations_total" in metrics_text
+        # Проверяем, что метрика увеличилась
+        new_value = get_metric_value(metrics, "auth_registrations_total") or 0.0
+        assert new_value > initial_value, f"Метрика auth_registrations_total должна увеличиться: {initial_value} -> {new_value}"
+        assert new_value == initial_value + 1.0, f"Метрика должна увеличиться на 1: {initial_value} -> {new_value}"
 
 
 def test_auth_metrics_login(client):
-    """Проверить, что метрики входа собираются."""
+    """Проверить, что метрики входа собираются и инкрементируются."""
     unique_email = f"test_login_metrics_{pytest.current_time}_{pytest.random_int}@example.com"
     
     client.post(
@@ -80,6 +94,10 @@ def test_auth_metrics_login(client):
             "password": "testpass123",
         },
     )
+    
+    # Получаем начальное значение метрики успешных логинов
+    initial_metrics = parse_metrics(client.get("/metrics").text)
+    initial_success = get_metric_sum(initial_metrics, "auth_logins_total", {"status": "success"})
     
     login_response = client.post(
         "/auth/login",
@@ -91,28 +109,54 @@ def test_auth_metrics_login(client):
     
     assert login_response.status_code == 200
     
+    # Получаем метрики после логина
     metrics_response = client.get("/metrics")
     assert metrics_response.status_code == 200
     
-    metrics_text = metrics_response.text
+    metrics = parse_metrics(metrics_response.text)
     
-    assert "auth_logins_total" in metrics_text
+    # Проверяем, что метрика успешных логинов увеличилась
+    new_success = get_metric_sum(metrics, "auth_logins_total", {"status": "success"})
+    assert new_success > initial_success, f"Метрика auth_logins_total{{status='success'}} должна увеличиться: {initial_success} -> {new_success}"
+    assert new_success == initial_success + 1.0, f"Метрика должна увеличиться на 1: {initial_success} -> {new_success}"
 
 
 def test_system_metrics_present(client):
-    """Проверить, что системные метрики присутствуют."""
+    """Проверить, что системные метрики присутствуют и имеют валидные значения."""
     response = client.get("/metrics")
     assert response.status_code == 200
     
-    metrics_text = response.text
+    metrics = parse_metrics(response.text)
     
-    assert "app_uptime_seconds" in metrics_text
-    assert "process_resident_memory_bytes" in metrics_text
-    assert "app_info" in metrics_text
+    # Проверяем наличие и значения системных метрик
+    uptime = get_metric_value(metrics, "app_uptime_seconds")
+    assert uptime is not None, "Метрика app_uptime_seconds должна присутствовать"
+    assert uptime >= 0, f"Uptime должен быть >= 0, получено: {uptime}"
+    
+    memory = get_metric_value(metrics, "process_resident_memory_bytes")
+    assert memory is not None, "Метрика process_resident_memory_bytes должна присутствовать"
+    assert memory > 0, f"Использование памяти должно быть > 0, получено: {memory}"
+    
+    # Проверяем app_info - метрика может быть с лейблами или без
+    # Сначала пробуем найти с лейблами
+    app_info_value = get_metric_value(metrics, "app_info", {"version": "1.0.0"})
+    # Если не найдено с лейблами, пробуем без лейблов (сумма всех значений)
+    if app_info_value is None:
+        app_info_value = get_metric_value(metrics, "app_info", None)
+    
+    # Если все еще не найдено, проверяем наличие метрики в тексте ответа
+    if app_info_value is None:
+        # Проверяем, есть ли метрика в тексте (может быть в другом формате)
+        assert "app_info" in response.text, "Метрика app_info должна присутствовать в ответе /metrics"
+        # Если метрика есть в тексте, но не парсится, это проблема парсера
+        # В этом случае просто проверяем наличие
+        return
+    
+    assert app_info_value == 1.0, f"app_info должен быть равен 1.0, получено: {app_info_value}"
 
 
 def test_business_metrics_booking(client):
-    """Проверить, что бизнес-метрики для бронирований собираются."""
+    """Проверить, что бизнес-метрики для бронирований собираются и инкрементируются."""
     unique_email = f"test_booking_metrics_{pytest.current_time}_{pytest.random_int}@example.com"
     
     register_response = client.post(
@@ -153,6 +197,10 @@ def test_business_metrics_booking(client):
         if rooms_response.status_code == 200 and len(rooms_response.json()) > 0:
             room_id = rooms_response.json()[0]["id"]
             
+            # Получаем начальное значение метрики
+            initial_metrics = parse_metrics(client.get("/metrics").text)
+            initial_value = get_metric_value(initial_metrics, "bookings_created_total") or 0.0
+            
             from datetime import date, timedelta
             
             date_from = date.today() + timedelta(days=1)
@@ -169,11 +217,16 @@ def test_business_metrics_booking(client):
             )
             
             if booking_response.status_code == 201:
+                # Получаем метрики после создания бронирования
                 metrics_response = client.get("/metrics")
                 assert metrics_response.status_code == 200
                 
-                metrics_text = metrics_response.text
-                assert "bookings_created_total" in metrics_text
+                metrics = parse_metrics(metrics_response.text)
+                
+                # Проверяем, что метрика увеличилась
+                new_value = get_metric_value(metrics, "bookings_created_total") or 0.0
+                assert new_value > initial_value, f"Метрика bookings_created_total должна увеличиться: {initial_value} -> {new_value}"
+                assert new_value == initial_value + 1.0, f"Метрика должна увеличиться на 1: {initial_value} -> {new_value}"
 
 
 def test_metrics_format_valid(client):

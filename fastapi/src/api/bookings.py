@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Body, HTTPException
 
 from src.api.dependencies import BookingsServiceDep, CurrentUserDep, PaginationDep
-from src.config import settings
 from src.metrics.collectors import bookings_created_total
+from src.metrics.helpers import should_collect_metrics
 from src.schemas import MessageResponse
 from src.schemas.bookings import Booking, SchemaBooking
 from src.utils.db_manager import DBManager
@@ -98,7 +98,7 @@ async def create_booking(
             date_to=booking.date_to,
         )
 
-    if settings.DB_NAME != "test":
+    if should_collect_metrics():
         bookings_created_total.inc()
 
     return MessageResponse(status="OK")
