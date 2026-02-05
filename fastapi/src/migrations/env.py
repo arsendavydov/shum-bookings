@@ -24,6 +24,7 @@ from src.models.users import UsersOrm
 from src.models.bookings import BookingsOrm
 from src.models.facilities import FacilitiesOrm
 from src.models.images import ImagesOrm
+from src.models.refresh_tokens import RefreshTokenOrm
 from src.config import settings
 
 # this is the Alembic Config object, which provides

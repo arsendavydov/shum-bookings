@@ -3,6 +3,7 @@ from src.repositories.bookings import BookingsRepository
 from src.repositories.cities import CitiesRepository
 from src.repositories.countries import CountriesRepository
 from src.repositories.hotels import HotelsRepository
+from src.repositories.refresh_tokens import RefreshTokensRepository
 from src.repositories.rooms import RoomsRepository
 from src.repositories.users import UsersRepository
 
@@ -12,6 +13,7 @@ __all__ = [
     "CitiesRepository",
     "CountriesRepository",
     "HotelsRepository",
+    "RefreshTokensRepository",
     "RoomsRepository",
     "UsersRepository",
 ]

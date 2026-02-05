@@ -4,15 +4,33 @@ Middleware для rate limiting (ограничение количества з�
 Защищает API от brute-force атак и DDoS.
 """
 
+from fastapi import Request, Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from src.config import settings
+from src.metrics.collectors import rate_limit_exceeded_total, rate_limit_requests_total
 
 # Создаем экземпляр limiter
 # Используем get_remote_address для определения IP клиента
 limiter = Limiter(key_func=get_remote_address)
+
+
+async def rate_limit_exceeded_handler_with_metrics(request: Request, exc: RateLimitExceeded) -> Response:
+    """
+    Обработчик ошибок rate limiting с метриками.
+
+    Args:
+        request: FastAPI Request объект
+        exc: Исключение RateLimitExceeded
+
+    Returns:
+        Response с ошибкой 429
+    """
+    endpoint = request.url.path
+    rate_limit_exceeded_total.labels(endpoint=endpoint).inc()
+    return await _rate_limit_exceeded_handler(request, exc)
 
 
 def setup_rate_limiting(app):
@@ -28,8 +46,17 @@ def setup_rate_limiting(app):
     # Подключаем limiter к приложению
     app.state.limiter = limiter
 
-    # Регистрируем обработчик ошибок rate limiting
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    # Регистрируем обработчик ошибок rate limiting с метриками
+    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler_with_metrics)
+    
+    # Добавляем middleware для сбора метрик rate limiting
+    @app.middleware("http")
+    async def rate_limit_metrics_middleware(request: Request, call_next):
+        endpoint = request.url.path
+        if settings.DB_NAME != "test":
+            rate_limit_requests_total.labels(endpoint=endpoint).inc()
+        response = await call_next(request)
+        return response
 
 
 # Экспортируем декоратор для использования в роутерах
@@ -56,5 +83,7 @@ def rate_limit(limit_value: str):
             return func
         return noop_decorator
     
+    # Возвращаем оригинальный декоратор
+    # Метрики будут собираться в обработчике ошибок и через middleware
     return limiter.limit(limit_value)
 

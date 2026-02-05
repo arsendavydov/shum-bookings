@@ -7,6 +7,8 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
 
+from src.config import settings
+from src.metrics.collectors import api_errors_total, api_request_duration_seconds, api_requests_total
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -34,12 +36,18 @@ class HTTPLoggingMiddleware(BaseHTTPMiddleware):
 
         status_code = 500  # По умолчанию, если произойдет ошибка
         response: Response | None = None
+        endpoint = request.url.path
+        error_type = None
+        
         try:
             response = await call_next(request)
             status_code = response.status_code
         except Exception as exc:
             # Логируем запрос даже если произошла ошибка
+            error_type = type(exc).__name__
             logger.error(f"Ошибка при обработке запроса {method} {path}", exc_info=True)
+            if settings.DB_NAME != "test":
+                api_errors_total.labels(endpoint=endpoint, error_type=error_type).inc()
             raise exc
         finally:
             process_time = time.time() - start_time
@@ -48,5 +56,10 @@ class HTTPLoggingMiddleware(BaseHTTPMiddleware):
             # чтобы гарантированно попасть и в app.log, и в stdout контейнера.
             logger.info(log_message)
             logging.getLogger().info(log_message)
+            
+            # Собираем метрики (только в основном режиме)
+            if settings.DB_NAME != "test":
+                api_requests_total.labels(endpoint=endpoint, method=method, status=status_code).inc()
+                api_request_duration_seconds.labels(endpoint=endpoint, method=method).observe(process_time)
 
         return response

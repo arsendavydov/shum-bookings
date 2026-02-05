@@ -26,6 +26,7 @@ from src.middleware.exception_handler import (
 )
 from src.middleware.http_logging import HTTPLoggingMiddleware
 from src.middleware.rate_limiting import setup_rate_limiting
+from src.metrics.setup import setup_prometheus_instrumentator
 from src.utils.logger import get_logger, setup_logging
 from src.utils.startup import shutdown_handler, startup_handler
 
@@ -82,6 +83,10 @@ else:
 app.add_exception_handler(DatabaseError, database_exception_handler)
 app.add_exception_handler(DomainException, domain_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
+
+setup_prometheus_instrumentator(app)
+if settings.DB_NAME != "test":
+    logger.info("Prometheus instrumentator настроен")
 
 app.include_router(health_router, tags=["Система"])
 app.include_router(auth_router, prefix="/auth", tags=["Аутентификация"])

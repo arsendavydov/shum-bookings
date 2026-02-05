@@ -74,4 +74,11 @@ class TokenResponse(BaseModel):
     """Схема ответа с JWT токеном."""
 
     access_token: str = Field(..., description="JWT access токен")
+    refresh_token: str = Field(..., description="Refresh токен для обновления access токена")
     token_type: str = Field(default="bearer", description="Тип токена")
+
+
+class RefreshTokenRequest(BaseModel):
+    """Схема запроса на обновление токена."""
+
+    refresh_token: str = Field(..., description="Refresh токен для обновления access токена")

@@ -153,9 +153,11 @@ class TestAuth:
         assert login_response.status_code == 200
         token_data = login_response.json()
         assert "access_token" in token_data
+        assert "refresh_token" in token_data
         assert "token_type" in token_data
         assert token_data["token_type"] == "bearer"
         assert len(token_data["access_token"]) > 0
+        assert len(token_data["refresh_token"]) > 0
 
         cookies = login_response.cookies
         assert "access_token" in cookies

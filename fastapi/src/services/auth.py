@@ -1,3 +1,4 @@
+import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -19,6 +20,7 @@ class AuthService:
         self.secret_key = settings.JWT_SECRET_KEY
         self.algorithm = settings.JWT_ALGORITHM
         self.expire_minutes = settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        self.refresh_token_expire_days = settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
         self.cookie_secure = settings.JWT_COOKIE_SECURE
 
     def hash_password(self, password: str) -> str:
@@ -126,3 +128,21 @@ class AuthService:
             return None
         except jwt.InvalidTokenError:
             return None
+
+    def generate_refresh_token(self) -> str:
+        """
+        Сгенерировать случайный refresh токен.
+
+        Returns:
+            Случайный токен в виде строки
+        """
+        return secrets.token_urlsafe(32)
+
+    def get_refresh_token_expires_at(self) -> datetime:
+        """
+        Получить время истечения refresh токена.
+
+        Returns:
+            Время истечения токена
+        """
+        return datetime.now(UTC) + timedelta(days=self.refresh_token_expire_days)

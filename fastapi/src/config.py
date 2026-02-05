@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str  # Секретный ключ для подписи JWT токенов
     JWT_ALGORITHM: str  # Алгоритм подписи JWT
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int  # Время жизни access токена в минутах
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30  # Время жизни refresh токена в днях (по умолчанию 30 дней)
     JWT_COOKIE_SECURE: bool  # Использовать secure cookie (только HTTPS)
 
     # Redis настройки

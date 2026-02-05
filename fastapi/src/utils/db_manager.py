@@ -11,6 +11,7 @@ from src.repositories.countries import CountriesRepository
 from src.repositories.facilities import FacilitiesRepository
 from src.repositories.hotels import HotelsRepository
 from src.repositories.images import ImagesRepository
+from src.repositories.refresh_tokens import RefreshTokensRepository
 from src.repositories.rooms import RoomsRepository
 from src.repositories.users import UsersRepository
 
@@ -150,6 +151,19 @@ class DBManager:
             ImagesRepository: Репозиторий для работы с изображениями
         """
         return ImagesRepository(session)
+
+    @staticmethod
+    def get_refresh_tokens_repository(session: AsyncSession) -> RefreshTokensRepository:
+        """
+        Получить репозиторий refresh токенов.
+
+        Args:
+            session: Сессия базы данных
+
+        Returns:
+            RefreshTokensRepository: Репозиторий для работы с refresh токенами
+        """
+        return RefreshTokensRepository(session)
 
     @staticmethod
     async def commit(session: AsyncSession) -> None:

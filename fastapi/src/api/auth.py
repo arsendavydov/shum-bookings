@@ -2,9 +2,15 @@ from fastapi import APIRouter, Body, HTTPException, Request, Response
 
 from src.api.dependencies import AuthServiceDep, CurrentUserDep, DBDep, UsersServiceDep
 from src.config import settings
+from src.metrics.collectors import (
+    auth_failed_attempts_total,
+    auth_logins_total,
+    auth_refresh_tokens_total,
+    auth_registrations_total,
+)
 from src.middleware.rate_limiting import rate_limit
 from src.schemas.common import MessageResponse
-from src.schemas.users import SchemaUser, TokenResponse, UserRequestLogin, UserRequestRegister, UserResponse
+from src.schemas.users import RefreshTokenRequest, SchemaUser, TokenResponse, UserRequestLogin, UserRequestRegister, UserResponse
 from src.utils.db_manager import DBManager
 
 router = APIRouter()
@@ -77,6 +83,9 @@ async def register_user(
         # Создание пользователя через сервис
         user = await users_service.register_user(user_register_data)
 
+    # Метрика регистрации
+    auth_registrations_total.inc()
+
     # Преобразуем SchemaUser в UserResponse (они идентичны, но для ясности используем UserResponse)
     return UserResponse.model_validate(user)
 
@@ -126,14 +135,26 @@ async def login_user(
     user_orm = await repo.get_orm_by_email(login_data.email)
 
     if user_orm is None:
+        auth_logins_total.labels(status="failure").inc()
+        auth_failed_attempts_total.labels(reason="user_not_found").inc()
         raise HTTPException(status_code=401, detail="Пользователь с таким email не найден")
 
     # Проверка пароля
     if not user_orm.hashed_password or not auth_service.verify_password(login_data.password, user_orm.hashed_password):
+        auth_logins_total.labels(status="failure").inc()
+        auth_failed_attempts_total.labels(reason="invalid_password").inc()
         raise HTTPException(status_code=401, detail="Неверный пароль")
 
     # Создание JWT токена
     access_token = auth_service.create_access_token(data={"sub": str(user_orm.id), "email": user_orm.email})
+
+    # Создание и сохранение refresh токена
+    refresh_token_repo = DBManager.get_refresh_tokens_repository(db)
+    refresh_token = auth_service.generate_refresh_token()
+    expires_at = auth_service.get_refresh_token_expires_at()
+    
+    async with DBManager.transaction(db):
+        await refresh_token_repo.create_token(user_orm.id, refresh_token, expires_at)
 
     # Установка токена в HTTP-only cookie
     expire_minutes = auth_service.expire_minutes
@@ -147,8 +168,11 @@ async def login_user(
         path="/",  # Доступен для всех путей
     )
 
-    # Возвращаем токен также в JSON ответе
-    return TokenResponse(access_token=access_token, token_type="bearer")
+    # Метрика успешного входа
+    auth_logins_total.labels(status="success").inc()
+
+    # Возвращаем токены в JSON ответе
+    return TokenResponse(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
 
 
 @router.get(
@@ -179,24 +203,111 @@ async def get_current_user_info(current_user: CurrentUserDep) -> SchemaUser:
 
 
 @router.post(
+    "/refresh",
+    summary="Обновить access токен",
+    description="Обновляет access токен используя refresh токен. Возвращает новый access токен и новый refresh токен.",
+    response_model=TokenResponse,
+)
+@rate_limit(f"{settings.RATE_LIMIT_AUTH_PER_MINUTE}/minute")
+async def refresh_token(
+    request: Request,
+    response: Response,
+    db: DBDep,
+    auth_service: AuthServiceDep,
+    refresh_data: RefreshTokenRequest = Body(
+        ...,
+        openapi_examples={
+            "1": {
+                "summary": "Обновление токена",
+                "description": "Обновление access токена с помощью refresh токена",
+                "value": {"refresh_token": "refresh_token_string"},
+            }
+        },
+    ),
+) -> TokenResponse:
+    """
+    Обновить access токен.
+
+    Проверяет refresh токен и выдает новый access токен и новый refresh токен.
+    Старый refresh токен отзывается.
+
+    Args:
+        db: Сессия базы данных
+        auth_service: Сервис для работы с аутентификацией
+        refresh_data: Данные с refresh токеном
+
+    Returns:
+        TokenResponse с новым access токеном и новым refresh токеном
+
+    Raises:
+        HTTPException: 401 если refresh токен невалиден или истек
+    """
+    refresh_token_repo = DBManager.get_refresh_tokens_repository(db)
+    
+    # Проверяем refresh токен
+    refresh_token_orm = await refresh_token_repo.get_by_token(refresh_data.refresh_token)
+    
+    if refresh_token_orm is None:
+        auth_refresh_tokens_total.labels(status="failure").inc()
+        raise HTTPException(status_code=401, detail="Невалидный или истекший refresh токен")
+    
+    # Получаем пользователя
+    users_repo = DBManager.get_users_repository(db)
+    user_orm = await users_repo.get_by_field_orm("id", refresh_token_orm.user_id)
+    
+    if user_orm is None:
+        raise HTTPException(status_code=401, detail="Пользователь не найден")
+    
+    # Отзываем старый refresh токен
+    async with DBManager.transaction(db):
+        await refresh_token_repo.revoke_token(refresh_data.refresh_token)
+        
+        # Создаем новый access токен
+        access_token = auth_service.create_access_token(data={"sub": str(user_orm.id), "email": user_orm.email})
+        
+        # Создаем новый refresh токен
+        new_refresh_token = auth_service.generate_refresh_token()
+        expires_at = auth_service.get_refresh_token_expires_at()
+        await refresh_token_repo.create_token(user_orm.id, new_refresh_token, expires_at)
+    
+    # Установка нового access токена в HTTP-only cookie
+    expire_minutes = auth_service.expire_minutes
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        max_age=expire_minutes * 60,
+        httponly=True,
+        secure=auth_service.cookie_secure,
+        samesite="lax",
+        path="/",
+    )
+    
+    # Метрика успешного обновления токена
+    auth_refresh_tokens_total.labels(status="success").inc()
+    
+    return TokenResponse(access_token=access_token, refresh_token=new_refresh_token, token_type="bearer")
+
+
+@router.post(
     "/logout",
     summary="Выход пользователя",
-    description="Выходит из системы, удаляя JWT токен из cookie. Требуется аутентификация через JWT токен. Токен становится недействительным на клиенте, но остается валидным до истечения срока действия.",
+    description="Выходит из системы, удаляя JWT токен из cookie и отзывая все refresh токены пользователя. Требуется аутентификация через JWT токен.",
     response_model=MessageResponse,
 )
-async def logout_user(response: Response, _current_user: CurrentUserDep) -> MessageResponse:
+async def logout_user(
+    response: Response,
+    db: DBDep,
+    current_user: CurrentUserDep,
+) -> MessageResponse:
     """
     Выйти из системы.
 
-    Удаляет JWT токен из HTTP-only cookie.
+    Удаляет JWT токен из HTTP-only cookie и отзывает все refresh токены пользователя.
     Требуется валидный JWT токен для подтверждения, что пользователь действительно авторизован.
-
-    Примечание: JWT токены являются stateless, поэтому сервер не может
-    инвалидировать токен на сервере. Токен останется технически валидным
-    до истечения срока действия, но клиент больше не будет его использовать.
 
     Args:
         response: FastAPI Response объект для установки cookie
+        db: Сессия базы данных
         current_user: Текущий авторизованный пользователь (из JWT токена)
 
     Returns:
@@ -205,13 +316,17 @@ async def logout_user(response: Response, _current_user: CurrentUserDep) -> Mess
     Raises:
         HTTPException: 401 если пользователь не аутентифицирован
     """
+    # Отзываем все refresh токены пользователя
+    refresh_token_repo = DBManager.get_refresh_tokens_repository(db)
+    async with DBManager.transaction(db):
+        await refresh_token_repo.revoke_all_user_tokens(current_user.id)
+    
     # Удаляем токен из cookie
-    # Используем те же параметры, что и при установке cookie
     response.delete_cookie(
         key="access_token",
         path="/",
         httponly=True,
-        secure=settings.JWT_COOKIE_SECURE,  # Используем то же значение, что и при установке
+        secure=settings.JWT_COOKIE_SECURE,
         samesite="lax",
     )
 

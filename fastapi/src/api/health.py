@@ -1,9 +1,10 @@
 from datetime import datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from sqlalchemy import text
 
 from src.api.dependencies import DBDep
+from src.metrics.setup import get_metrics
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -97,3 +98,20 @@ async def liveness_check() -> dict:
         Словарь со статусом жизнеспособности
     """
     return {"alive": True, "timestamp": datetime.now().isoformat()}
+
+
+@router.get(
+    "/metrics",
+    summary="Prometheus metrics",
+    description="Эндпоинт для сбора метрик Prometheus. Возвращает все метрики в формате Prometheus.",
+    tags=["Система"],
+)
+async def metrics() -> Response:
+    """
+    Получить метрики Prometheus.
+
+    Returns:
+        Response с метриками в формате Prometheus (text/plain)
+    """
+    metrics_data = get_metrics()
+    return Response(content=metrics_data, media_type="text/plain; version=0.0.4; charset=utf-8")
