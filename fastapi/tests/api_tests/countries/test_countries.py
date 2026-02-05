@@ -3,6 +3,14 @@ import time
 import pytest
 
 
+def _generate_unique_iso_code(timestamp: int, offset: int = 0) -> str:
+    """Генерирует уникальный ISO код из timestamp с опциональным смещением"""
+    # Используем разные части timestamp для большей уникальности
+    letter1 = chr(ord("A") + (((timestamp + offset) % 100) % 26))
+    letter2 = chr(ord("A") + ((((timestamp + offset) // 100) % 100) % 26))
+    return f"{letter1}{letter2}"
+
+
 @pytest.mark.countries
 class TestCountries:
     """Эндпоинты стран"""
@@ -167,12 +175,17 @@ class TestCountries:
         """Частичное обновление страны"""
         timestamp = int(time.time() * 1000)
         unique_name = f"{test_prefix} Частично {timestamp}"
-        # Генерируем уникальный ISO код
-        letter1 = chr(ord("A") + (timestamp % 26))
-        letter2 = chr(ord("A") + ((timestamp // 26) % 26))
-        unique_iso = f"{letter1}{letter2}"
+        # Генерируем уникальный ISO код с retry логикой на случай коллизий
+        unique_iso = _generate_unique_iso_code(timestamp)
         country_data = {"name": unique_name, "iso_code": unique_iso}
         create_response = client.post("/countries", json=country_data)
+        # Если получили 409 (конфликт), пробуем с другим ISO кодом
+        offset = 1
+        while create_response.status_code == 409 and offset < 10:
+            unique_iso = _generate_unique_iso_code(timestamp, offset)
+            country_data = {"name": unique_name, "iso_code": unique_iso}
+            create_response = client.post("/countries", json=country_data)
+            offset += 1
         assert create_response.status_code == 200
 
         get_response = client.get(f"/countries?name={unique_name}")

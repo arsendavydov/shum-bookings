@@ -87,12 +87,33 @@ def check_test_environment():
     print("✅ Проверка окружения: DB_NAME=test подтверждено")
 
 
+def cleanup_test_images():
+    """Удаляет все тестовые изображения из папки static/images"""
+    images_dir = Path(__file__).resolve().parent.parent / "src" / "static" / "images"
+    if not images_dir.exists():
+        return
+
+    deleted_count = 0
+    for file_path in images_dir.glob("*test*.jpg"):
+        try:
+            if file_path.is_file():
+                file_path.unlink()
+                deleted_count += 1
+        except Exception as e:
+            print(f"⚠️ Не удалось удалить файл {file_path}: {e}")
+
+    if deleted_count > 0:
+        print(f"🧹 Удалено {deleted_count} тестовых изображений из {images_dir}")
+
+
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_before_tests():
     """Очищает тестовую БД перед запуском всех тестов"""
     print("🧹 Очистка тестовой БД перед запуском тестов...")
     cleanup_test_database()
+    cleanup_test_images()
     yield
+    cleanup_test_images()
 
 
 @pytest.fixture(scope="session", autouse=True)
