@@ -2,7 +2,7 @@ from typing import Any, Generic, TypeVar
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, selectinload
 
 # Generic тип для ORM модели
 ModelType = TypeVar("ModelType", bound=DeclarativeBase)
@@ -93,7 +93,7 @@ class BaseRepository(Generic[ModelType]):
 
         return instances[0]
 
-    async def get_by_id(self, id: int) -> Any | None:
+    async def get_by_id(self, id: int, relationship_names: list[str] | None = None) -> Any | None:
         """
         Получить запись по ID.
 
@@ -102,14 +102,29 @@ class BaseRepository(Generic[ModelType]):
 
         Args:
             id: ID записи
+            relationship_names: Список имен relationships для загрузки через selectinload.
+                                Если None, relationships не загружаются (избегает N+1 запросов).
 
         Returns:
             Pydantic схема или None, если не найдено
 
         Raises:
             NotImplementedError: Если метод _to_schema не переопределен
+            ValueError: Если указано несуществующее имя relationship
+
+        Example:
+            # Загрузить отель с городом и изображениями
+            hotel = await repo.get_by_id(1, relationship_names=["city", "images"])
         """
         query = select(self.model).where(self.model.id == id)
+
+        if relationship_names:
+            # Загружаем указанные relationships через selectinload
+            for rel_name in relationship_names:
+                if not hasattr(self.model, rel_name):
+                    raise ValueError(f"Relationship '{rel_name}' не найден в модели {self.model.__name__}")
+                query = query.options(selectinload(getattr(self.model, rel_name)))
+
         result = await self.session.execute(query)
         orm_obj = result.scalar_one_or_none()
 
