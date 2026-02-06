@@ -25,23 +25,19 @@ if not TEST_PASSWORD:
 
 
 async def _recreate_test_database_async():
-    """Пересоздает все таблицы в тестовой БД через SQLAlchemy"""
+    """Пересоздает все таблицы в тестовой БД через SQLAlchemy."""
     try:
-        # Получаем настройки БД из переменных окружения
         db_host = os.getenv("DB_HOST", "localhost")
         db_port = int(os.getenv("DB_PORT", "5432"))
         db_username = os.getenv("DB_USERNAME", "postgres")
         db_password = os.getenv("DB_PASSWORD", "postgres")
         db_name = os.getenv("DB_NAME", "test")
 
-        # Создаем async engine для тестовой БД
         db_url = f"postgresql+asyncpg://{db_username}:{db_password}@{db_host}:{db_port}/{db_name}"
         engine = create_async_engine(db_url, echo=False)
 
-        # Импортируем Base и все модели для правильной инициализации метаданных
         from src.base import Base
 
-        # Пересоздаем все таблицы (drop_all + create_all)
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
             await conn.run_sync(Base.metadata.create_all)

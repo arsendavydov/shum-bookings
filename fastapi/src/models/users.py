@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Integer, String
+from sqlalchemy import BigInteger, Integer, String, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.base import Base
@@ -14,3 +14,6 @@ class UsersOrm(Base):
     last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     telegram_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     pachca_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+
+Index("ix_users_email", UsersOrm.email, unique=True)

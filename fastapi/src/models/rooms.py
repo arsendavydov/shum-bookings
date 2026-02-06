@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy import ForeignKey, Integer, String, Text, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.base import Base
@@ -19,7 +19,9 @@ class RoomsOrm(Base):
     price: Mapped[int] = mapped_column(Integer)
     quantity: Mapped[int] = mapped_column(Integer)
 
-    # Many-to-many связь с facilities через промежуточную таблицу
     facilities: Mapped[list["FacilitiesOrm"]] = relationship(
         "FacilitiesOrm", secondary="rooms_facilities", back_populates="rooms"
     )
+
+
+Index("ix_rooms_hotel_id", RoomsOrm.hotel_id)

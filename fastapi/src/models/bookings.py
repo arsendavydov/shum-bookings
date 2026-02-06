@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, func, Index
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,7 +20,7 @@ class BookingsOrm(Base):
     date_from: Mapped[Date] = mapped_column(Date)
     date_to: Mapped[Date] = mapped_column(Date)
     price: Mapped[int] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default="CURRENT_TIMESTAMP")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     room: Mapped["RoomsOrm"] = relationship("RoomsOrm")
 
@@ -61,3 +61,10 @@ class BookingsOrm(Base):
         if nights <= 0:
             raise ValueError("Количество ночей должно быть больше нуля")
         return room_price_per_night * nights
+
+
+Index("ix_bookings_room_id", BookingsOrm.room_id)
+Index("ix_bookings_date_from", BookingsOrm.date_from)
+Index("ix_bookings_date_to", BookingsOrm.date_to)
+Index("ix_bookings_user_id", BookingsOrm.user_id)
+Index("ix_bookings_room_dates", BookingsOrm.room_id, BookingsOrm.date_from, BookingsOrm.date_to)

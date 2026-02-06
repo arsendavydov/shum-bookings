@@ -1,7 +1,7 @@
 from datetime import time as dt_time
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer, String, Text, Time
+from sqlalchemy import ForeignKey, Integer, String, Text, Time, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.base import Base
@@ -24,5 +24,7 @@ class HotelsOrm(Base):
 
     city: Mapped["CitiesOrm"] = relationship("CitiesOrm", back_populates="hotels")
 
-    # Many-to-many связь с images через промежуточную таблицу
     images: Mapped[list["ImagesOrm"]] = relationship("ImagesOrm", secondary="hotels_images", back_populates="hotels")
+
+
+Index("ix_hotels_city_id", HotelsOrm.city_id)

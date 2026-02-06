@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import ForeignKey, Integer, String, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.base import Base
@@ -19,3 +19,6 @@ class CitiesOrm(Base):
 
     country: Mapped["CountriesOrm"] = relationship("CountriesOrm", back_populates="cities")
     hotels: Mapped[list["HotelsOrm"]] = relationship("HotelsOrm", back_populates="city")
+
+
+Index("ix_cities_country_id", CitiesOrm.country_id)
