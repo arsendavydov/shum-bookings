@@ -1,0 +1,21 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: standard
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: rancher.io/local-path
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+---
+# Альтернативный StorageClass для ReadWriteMany (если нужен NFS)
+# Раскомментируйте, если используете NFS
+# apiVersion: storage.k8s.io/v1
+# kind: StorageClass
+# metadata:
+#   name: nfs-client
+# provisioner: nfs-client
+# parameters:
+#   archiveOnDelete: "false"
+# volumeBindingMode: Immediate
+

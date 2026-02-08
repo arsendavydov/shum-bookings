@@ -183,6 +183,7 @@ deploy:production:
       sed -i "s|registry.gitlab.com/arsen-davydov-main/shum_booking_v2/nginx:latest|$CI_REGISTRY_IMAGE/nginx:$CI_COMMIT_SHA|g" k8s/nginx-deployment.yaml
     # Применяем манифесты в правильном порядке
     - kubectl apply -f k8s/namespace.yaml
+    - kubectl apply -f k8s/storageclass.yaml  # StorageClass для K3s
     - kubectl apply -f k8s/configmap.yaml
     - kubectl apply -f k8s/nginx-configmap.yaml
     - kubectl apply -f k8s/pvc.yaml

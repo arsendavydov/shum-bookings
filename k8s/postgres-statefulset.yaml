@@ -79,7 +79,7 @@ spec:
       name: postgres-data
     spec:
       accessModes: [ "ReadWriteOnce" ]
-      storageClassName: standard  # ЗАМЕНИТЕ на ваш StorageClass
+      storageClassName: standard  # Используется local-path в K3s
       resources:
         requests:
           storage: 20Gi  # Размер диска для БД

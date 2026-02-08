@@ -97,7 +97,7 @@ metadata:
 spec:
   accessModes:
   - ReadWriteOnce
-  storageClassName: standard  # ЗАМЕНИТЕ на ваш StorageClass
+  storageClassName: standard  # Используется local-path в K3s
   resources:
     requests:
       storage: 5Gi  # Размер диска для Redis
