@@ -67,8 +67,6 @@ build:nginx:
     - main
     - master
     - merge_requests
-  tags:
-    - docker
 
 # ============================================================================
 # TEST: Запуск тестов на тестовой БД
@@ -151,8 +149,6 @@ test:
     - main
     - master
     - merge_requests
-  tags:
-    - docker
 
 # ============================================================================
 # DEPLOY: Деплой в Kubernetes
@@ -178,27 +174,27 @@ deploy:production:
   script:
     # Обновляем образы в deployment манифестах
     - |
-      sed -i "s|registry.gitlab.com/arsen-davydov-main/shum_booking_v2:latest|$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA|g" k8s/fastapi-deployment.yaml
-      sed -i "s|registry.gitlab.com/arsen-davydov-main/shum_booking_v2:latest|$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA|g" k8s/celery-deployment.yaml
-      sed -i "s|registry.gitlab.com/arsen-davydov-main/shum_booking_v2/nginx:latest|$CI_REGISTRY_IMAGE/nginx:$CI_COMMIT_SHA|g" k8s/nginx-deployment.yaml
+      sed -i "s|registry.gitlab.com/arsen-davydov-main/shum_booking_v2:latest|$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA|g" k3s/fastapi-deployment.yaml
+      sed -i "s|registry.gitlab.com/arsen-davydov-main/shum_booking_v2:latest|$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA|g" k3s/celery-deployment.yaml
+      sed -i "s|\${CI_REGISTRY_IMAGE}/nginx:latest|$CI_REGISTRY_IMAGE/nginx:$CI_COMMIT_SHA|g" k3s/nginx-deployment.yaml
     # Применяем манифесты в правильном порядке
-    - kubectl apply -f k8s/namespace.yaml
-    - kubectl apply -f k8s/storageclass.yaml  # StorageClass для K3s
-    - kubectl apply -f k8s/configmap.yaml
-    - kubectl apply -f k8s/nginx-configmap.yaml
-    - kubectl apply -f k8s/pvc.yaml
+    - kubectl apply -f k3s/namespace.yaml
+    - kubectl apply -f k3s/storageclass.yaml  # StorageClass для K3s
+    - kubectl apply -f k3s/configmap.yaml
+    - kubectl apply -f k3s/nginx-configmap.yaml
+    - kubectl apply -f k3s/pvc.yaml
     # База данных и кэш (должны быть первыми)
-    - kubectl apply -f k8s/postgres-statefulset.yaml
-    - kubectl apply -f k8s/redis-deployment.yaml
+    - kubectl apply -f k3s/postgres-statefulset.yaml
+    - kubectl apply -f k3s/redis-deployment.yaml
     # Приложение
-    - kubectl apply -f k8s/fastapi-deployment.yaml
-    - kubectl apply -f k8s/fastapi-service.yaml
-    - kubectl apply -f k8s/celery-deployment.yaml
+    - kubectl apply -f k3s/fastapi-deployment.yaml
+    - kubectl apply -f k3s/fastapi-service.yaml
+    - kubectl apply -f k3s/celery-deployment.yaml
     # Nginx
-    - kubectl apply -f k8s/nginx-deployment.yaml
-    - kubectl apply -f k8s/nginx-service.yaml
+    - kubectl apply -f k3s/nginx-deployment.yaml
+    - kubectl apply -f k3s/nginx-service.yaml
     # Ingress (последним)
-    - kubectl apply -f k8s/ingress.yaml
+    - kubectl apply -f k3s/ingress.yaml
     # Ждем готовности подов
     - kubectl rollout status statefulset/postgres -n $KUBE_NAMESPACE --timeout=5m
     - kubectl rollout status deployment/redis -n $KUBE_NAMESPACE --timeout=5m
@@ -216,8 +212,6 @@ deploy:production:
     - main
     - master
   when: on_success
-  tags:
-    - kubernetes
 
 # ============================================================================
 # ROLLBACK: Откат к предыдущей версии (ручной запуск)
@@ -245,6 +239,4 @@ rollback:production:
   only:
     - main
     - master
-  tags:
-    - kubernetes
 
