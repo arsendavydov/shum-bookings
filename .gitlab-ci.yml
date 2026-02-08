@@ -156,18 +156,38 @@ deploy:production:
   stage: deploy
   image: alpine/k8s:1.28.0
   before_script:
+    - apk add --no-cache openssh-client
     - kubectl version --client
-    # Настройка kubectl (используем переменную KUBECONFIG_BASE64 из GitLab CI/CD Variables)
+    # Настройка SSH для туннеля к K3s
+    - |
+      if [ -z "$K3S_SSH_KEY" ] || [ -z "$K3S_SERVER_IP" ] || [ -z "$K3S_SSH_USER" ]; then
+        echo "❌ K3S_SSH_KEY, K3S_SERVER_IP или K3S_SSH_USER не настроены!"
+        exit 1
+      fi
+      mkdir -p ~/.ssh
+      echo "$K3S_SSH_KEY" > ~/.ssh/k3s_key
+      chmod 600 ~/.ssh/k3s_key
+      ssh-keyscan -H $K3S_SERVER_IP >> ~/.ssh/known_hosts 2>/dev/null || true
+    # Настройка kubectl через SSH туннель
     - |
       if [ -n "$KUBECONFIG_BASE64" ]; then
         mkdir -p ~/.kube
         echo "$KUBECONFIG_BASE64" | base64 -d > ~/.kube/config
+        # Заменяем localhost на IP сервера для SSH туннеля
+        sed -i "s|server: https://127.0.0.1:6443|server: https://$K3S_SERVER_IP:6443|g" ~/.kube/config
         chmod 600 ~/.kube/config
         export KUBECONFIG=~/.kube/config
       else
-        echo "❌ KUBECONFIG_BASE64 не настроен в GitLab CI/CD Variables!"
+        echo "❌ KUBECONFIG_BASE64 не настроен!"
         exit 1
       fi
+    # Создаем SSH туннель в фоне
+    - |
+      ssh -i ~/.ssh/k3s_key -o StrictHostKeyChecking=no -f -N -L 6443:127.0.0.1:6443 $K3S_SSH_USER@$K3S_SERVER_IP || true
+      sleep 2
+    # Обновляем kubeconfig для использования localhost через туннель
+    - |
+      sed -i "s|server: https://$K3S_SERVER_IP:6443|server: https://127.0.0.1:6443|g" ~/.kube/config
     # Проверка подключения к кластеру
     - kubectl cluster-info
     - kubectl get nodes
