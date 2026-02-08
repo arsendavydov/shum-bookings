@@ -229,9 +229,18 @@ deploy:production:
           echo "   Удаляем старый PVC..."
           kubectl delete pvc booking-images-pvc -n $KUBE_NAMESPACE --ignore-not-found=true || true
           sleep 2
+          echo "   Создаем новый PVC с правильными параметрами..."
+          kubectl apply -f k3s/pvc.yaml
+          echo "   Ждем создания PVC..."
+          sleep 3
+        else
+          echo "✅ PVC booking-images-pvc уже имеет правильный accessMode: ReadWriteOnce"
         fi
+      else
+        echo "📦 PVC booking-images-pvc не существует, создаем..."
+        kubectl apply -f k3s/pvc.yaml
+        sleep 2
       fi
-    - kubectl apply -f k3s/pvc.yaml
     # Проверяем, что секреты существуют (должны быть созданы вручную через create-secrets.sh)
     - |
       if ! kubectl get secret booking-secrets -n $KUBE_NAMESPACE &>/dev/null; then
@@ -242,32 +251,25 @@ deploy:production:
       else
         echo "✅ Secret booking-secrets найден"
       fi
-    # Проверяем и исправляем проблемные PVC
+    # Проверяем статус PVC после создания
     - echo "📦 Проверка PVC:"
     - kubectl get pvc -n $KUBE_NAMESPACE || true
     - |
-      # Удаляем PVC booking-images-pvc если он существует с неправильными параметрами
-      # (accessModes нельзя изменить после создания, нужно пересоздать)
+      # Ждем, пока PVC станет Bound (если он был создан)
       if kubectl get pvc booking-images-pvc -n $KUBE_NAMESPACE &>/dev/null; then
-        PVC_ACCESS_MODE=$(kubectl get pvc booking-images-pvc -n $KUBE_NAMESPACE -o jsonpath='{.spec.accessModes[0]}' 2>/dev/null || echo "")
-        if [ "$PVC_ACCESS_MODE" != "ReadWriteOnce" ]; then
-          echo "⚠️  PVC booking-images-pvc имеет неправильный accessMode: $PVC_ACCESS_MODE"
-          echo "   Удаляем для пересоздания с правильными настройками..."
-          # Удаляем поды, которые используют этот PVC
-          kubectl delete deployment fastapi-app celery-worker nginx -n $KUBE_NAMESPACE --ignore-not-found=true || true
-          sleep 3
-          # Удаляем PVC
-          kubectl delete pvc booking-images-pvc -n $KUBE_NAMESPACE --ignore-not-found=true || true
+        echo "⏳ Ожидание готовности PVC booking-images-pvc..."
+        for i in {1..30}; do
+          PVC_STATUS=$(kubectl get pvc booking-images-pvc -n $KUBE_NAMESPACE -o jsonpath='{.status.phase}' 2>/dev/null || echo "Pending")
+          if [ "$PVC_STATUS" = "Bound" ]; then
+            echo "✅ PVC booking-images-pvc готов (Bound)"
+            break
+          fi
+          echo "   Статус PVC: $PVC_STATUS (попытка $i/30)"
           sleep 2
+        done
+        if [ "$PVC_STATUS" != "Bound" ]; then
+          echo "⚠️  PVC booking-images-pvc все еще не Bound, продолжаем..."
         fi
-      fi
-      # Удаляем PVC в статусе Pending
-      PENDING_PVC=$(kubectl get pvc -n $KUBE_NAMESPACE -o jsonpath='{.items[?(@.status.phase=="Pending")].metadata.name}' 2>/dev/null || echo "")
-      if [ -n "$PENDING_PVC" ]; then
-        echo "⚠️  Найден PVC в статусе Pending: $PENDING_PVC"
-        echo "   Удаляем для пересоздания с правильными настройками..."
-        kubectl delete pvc $PENDING_PVC -n $KUBE_NAMESPACE --ignore-not-found=true || true
-        sleep 2
       fi
     # База данных и кэш (должны быть первыми)
     - kubectl apply -f k3s/postgres-statefulset.yaml
