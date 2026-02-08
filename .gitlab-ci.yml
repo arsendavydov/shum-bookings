@@ -203,6 +203,19 @@ deploy:production:
     - kubectl apply -f k3s/configmap.yaml
     - kubectl apply -f k3s/nginx-configmap.yaml
     - kubectl apply -f k3s/pvc.yaml
+    # Проверяем, что секреты существуют (должны быть созданы вручную через create-secrets.sh)
+    - |
+      if ! kubectl get secret booking-secrets -n $KUBE_NAMESPACE &>/dev/null; then
+        echo "⚠️  Warning: secret booking-secrets не найден!"
+        echo "   Секреты должны быть созданы вручную на сервере через:"
+        echo "   ./k3s/create-secrets.sh"
+        echo "   Продолжаем деплой, но PostgreSQL может не запуститься..."
+      else
+        echo "✅ Secret booking-secrets найден"
+      fi
+    # Проверяем статус PVC перед применением StatefulSet
+    - echo "📦 Проверка PVC:"
+    - kubectl get pvc -n $KUBE_NAMESPACE || true
     # База данных и кэш (должны быть первыми)
     - kubectl apply -f k3s/postgres-statefulset.yaml
     - kubectl apply -f k3s/redis-deployment.yaml
@@ -215,14 +228,70 @@ deploy:production:
     - kubectl apply -f k3s/nginx-service.yaml
     # Ingress (последним)
     - kubectl apply -f k3s/ingress.yaml
-    # Ждем готовности подов
-    - kubectl rollout status statefulset/postgres -n $KUBE_NAMESPACE --timeout=5m
-    - kubectl rollout status deployment/redis -n $KUBE_NAMESPACE --timeout=5m
-    - kubectl rollout status deployment/fastapi-app -n $KUBE_NAMESPACE --timeout=5m
-    - kubectl rollout status deployment/celery-worker -n $KUBE_NAMESPACE --timeout=5m
-    - kubectl rollout status deployment/nginx -n $KUBE_NAMESPACE --timeout=5m
-    # Проверяем статус
-    - kubectl get pods -n $KUBE_NAMESPACE
+    # Проверяем, что секреты и конфигмапы существуют
+    - kubectl get secrets -n $KUBE_NAMESPACE
+    - kubectl get configmaps -n $KUBE_NAMESPACE
+    # Ждем готовности подов с диагностикой
+    - |
+      echo "⏳ Ожидание готовности PostgreSQL..."
+      if ! kubectl rollout status statefulset/postgres -n $KUBE_NAMESPACE --timeout=5m; then
+        echo "❌ PostgreSQL не стал ready. Диагностика:"
+        echo "📊 Статус подов:"
+        kubectl get pods -n $KUBE_NAMESPACE -l app=postgres -o wide
+        echo ""
+        echo "📋 Описание пода:"
+        kubectl describe pod -n $KUBE_NAMESPACE -l app=postgres | tail -100
+        echo ""
+        echo "📝 Логи пода:"
+        kubectl logs -n $KUBE_NAMESPACE -l app=postgres --tail=100 || true
+        echo ""
+        echo "📦 Статус PVC:"
+        kubectl get pvc -n $KUBE_NAMESPACE | grep postgres || true
+        echo ""
+        echo "📊 События в namespace:"
+        kubectl get events -n $KUBE_NAMESPACE --sort-by='.lastTimestamp' | tail -20 || true
+        exit 1
+      fi
+    - |
+      echo "⏳ Ожидание готовности Redis..."
+      if ! kubectl rollout status deployment/redis -n $KUBE_NAMESPACE --timeout=5m; then
+        echo "❌ Redis не стал ready. Диагностика:"
+        kubectl get pods -n $KUBE_NAMESPACE -l app=redis
+        kubectl describe pod -n $KUBE_NAMESPACE -l app=redis | tail -50
+        kubectl logs -n $KUBE_NAMESPACE -l app=redis --tail=50 || true
+        exit 1
+      fi
+    - |
+      echo "⏳ Ожидание готовности FastAPI..."
+      if ! kubectl rollout status deployment/fastapi-app -n $KUBE_NAMESPACE --timeout=5m; then
+        echo "❌ FastAPI не стал ready. Диагностика:"
+        kubectl get pods -n $KUBE_NAMESPACE -l app=fastapi-app
+        kubectl describe pod -n $KUBE_NAMESPACE -l app=fastapi-app | tail -50
+        kubectl logs -n $KUBE_NAMESPACE -l app=fastapi-app --tail=50 || true
+        exit 1
+      fi
+    - |
+      echo "⏳ Ожидание готовности Celery..."
+      if ! kubectl rollout status deployment/celery-worker -n $KUBE_NAMESPACE --timeout=5m; then
+        echo "❌ Celery не стал ready. Диагностика:"
+        kubectl get pods -n $KUBE_NAMESPACE -l app=celery-worker
+        kubectl describe pod -n $KUBE_NAMESPACE -l app=celery-worker | tail -50
+        kubectl logs -n $KUBE_NAMESPACE -l app=celery-worker --tail=50 || true
+        exit 1
+      fi
+    - |
+      echo "⏳ Ожидание готовности Nginx..."
+      if ! kubectl rollout status deployment/nginx -n $KUBE_NAMESPACE --timeout=5m; then
+        echo "❌ Nginx не стал ready. Диагностика:"
+        kubectl get pods -n $KUBE_NAMESPACE -l app=nginx
+        kubectl describe pod -n $KUBE_NAMESPACE -l app=nginx | tail -50
+        kubectl logs -n $KUBE_NAMESPACE -l app=nginx --tail=50 || true
+        exit 1
+      fi
+    # Проверяем финальный статус
+    - echo "📊 Финальный статус подов:"
+    - kubectl get pods -n $KUBE_NAMESPACE -o wide
+    - echo "📊 Финальный статус сервисов:"
     - kubectl get services -n $KUBE_NAMESPACE
     - echo "✅ Деплой завершен успешно!"
   environment:

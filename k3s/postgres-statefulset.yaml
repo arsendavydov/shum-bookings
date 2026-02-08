@@ -70,10 +70,10 @@ spec:
             - /bin/sh
             - -c
             - pg_isready -U $(POSTGRES_USER) -d $(POSTGRES_DB)
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 5
   volumeClaimTemplates:
   - metadata:
       name: postgres-data
