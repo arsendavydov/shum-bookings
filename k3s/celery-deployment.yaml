@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker
+  namespace: booking
+  labels:
+    app: celery-worker
+    component: worker
+spec:
+  replicas: 1  # Количество воркеров (можно увеличить)
+  selector:
+    matchLabels:
+      app: celery-worker
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: celery-worker
+        component: worker
+    spec:
+      containers:
+      - name: celery
+        image: registry.gitlab.com/arsen-davydov-main/shum_booking_v2:latest  # Обновляется автоматически в CI/CD
+        imagePullPolicy: Always
+        command:
+        - celery
+        - -A
+        - src.tasks.celery_app
+        - worker
+        - --loglevel=info
+        env:
+        # Из ConfigMap
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: DB_NAME
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: REDIS_PORT
+        - name: REDIS_DB
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: REDIS_DB
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: LOG_LEVEL
+        - name: LOG_FORMAT_JSON
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: LOG_FORMAT_JSON
+        - name: PYTHONUNBUFFERED
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: PYTHONUNBUFFERED
+        - name: MAX_IMAGE_FILE_SIZE_MB
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: MAX_IMAGE_FILE_SIZE_MB
+        - name: PYTHONUNBUFFERED
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: PYTHONUNBUFFERED
+        # Из Secrets
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: booking-secrets
+              key: DB_USERNAME
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: booking-secrets
+              key: DB_PASSWORD
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: booking-secrets
+              key: REDIS_PASSWORD
+              optional: true
+        volumeMounts:
+        - name: images-storage
+          mountPath: /app/src/static/images
+        - name: temp-storage
+          mountPath: /app/src/static/temp
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: images-storage
+        persistentVolumeClaim:
+          claimName: booking-images-pvc
+      - name: temp-storage
+        emptyDir: {}
+      restartPolicy: Always
+

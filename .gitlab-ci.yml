@@ -241,9 +241,6 @@ rollback:production:
     - kubectl rollout status deployment/fastapi-app -n $KUBE_NAMESPACE --timeout=5m
     - kubectl rollout status deployment/celery-worker -n $KUBE_NAMESPACE --timeout=5m
     - echo "✅ Откат выполнен успешно!"
-  environment:
-    name: production
-    action: rollback
   when: manual
   only:
     - main
