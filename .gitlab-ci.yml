@@ -160,12 +160,12 @@ deploy:production:
     - kubectl version --client
     # Настройка SSH для туннеля к K3s
     - |
-      if [ -z "$K3S_SSH_KEY" ] || [ -z "$K3S_SERVER_IP" ] || [ -z "$K3S_SSH_USER" ]; then
-        echo "❌ K3S_SSH_KEY, K3S_SERVER_IP или K3S_SSH_USER не настроены!"
+      if [ -z "$K3S_SSH_KEY_BASE64" ] || [ -z "$K3S_SERVER_IP" ] || [ -z "$K3S_SSH_USER" ]; then
+        echo "❌ K3S_SSH_KEY_BASE64, K3S_SERVER_IP или K3S_SSH_USER не настроены!"
         exit 1
       fi
       mkdir -p ~/.ssh
-      echo "$K3S_SSH_KEY" > ~/.ssh/k3s_key
+      echo "$K3S_SSH_KEY_BASE64" | base64 -d > ~/.ssh/k3s_key
       chmod 600 ~/.ssh/k3s_key
       ssh-keyscan -H $K3S_SERVER_IP >> ~/.ssh/known_hosts 2>/dev/null || true
     # Настройка kubectl через SSH туннель
