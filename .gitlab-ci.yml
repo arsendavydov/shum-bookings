@@ -43,8 +43,6 @@ build:fastapi:
     - main
     - master
     - merge_requests
-  tags:
-    - docker
 
 build:nginx:
   stage: build
