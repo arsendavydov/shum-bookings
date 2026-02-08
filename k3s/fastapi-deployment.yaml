@@ -7,7 +7,7 @@ metadata:
     app: fastapi-app
     component: api
 spec:
-  replicas: 2  # Количество реплик (можно увеличить для высокой нагрузки)
+  replicas: 1  # Уменьшено для сервера с ограниченными ресурсами
   selector:
     matchLabels:
       app: fastapi-app
@@ -142,11 +142,11 @@ spec:
           mountPath: /app/src/static/temp
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "250m"
+            memory: "128Mi"
+            cpu: "100m"
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "256Mi"
+            cpu: "200m"
         livenessProbe:
           httpGet:
             path: /live
