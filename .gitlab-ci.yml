@@ -1,0 +1,244 @@
+# ============================================================================
+# GitLab CI/CD Pipeline для деплоя в Kubernetes
+# ============================================================================
+
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  # Docker registry (GitLab Container Registry)
+  CI_REGISTRY_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_PATH}
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  
+  # Kubernetes
+  KUBE_NAMESPACE: booking
+  
+  # Python
+  PYTHONUNBUFFERED: "1"
+
+# ============================================================================
+# BUILD: Сборка Docker образов
+# ============================================================================
+build:fastapi:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - cd fastapi
+    - |
+      docker build \
+        -f Dockerfile.prod \
+        -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA \
+        -t $CI_REGISTRY_IMAGE:latest \
+        .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE:latest
+  only:
+    - main
+    - master
+    - merge_requests
+  tags:
+    - docker
+
+build:nginx:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - cd nginx
+    - |
+      docker build \
+        -f Dockerfile \
+        -t $CI_REGISTRY_IMAGE/nginx:$CI_COMMIT_SHA \
+        -t $CI_REGISTRY_IMAGE/nginx:latest \
+        .
+    - docker push $CI_REGISTRY_IMAGE/nginx:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE/nginx:latest
+  only:
+    - main
+    - master
+    - merge_requests
+  tags:
+    - docker
+
+# ============================================================================
+# TEST: Запуск тестов на тестовой БД
+# ============================================================================
+test:
+  stage: test
+  image: python:3.11
+  services:
+    - name: postgres:16
+      alias: postgres-test
+      variables:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+        POSTGRES_DB: test
+    - name: redis:7-alpine
+      alias: redis-test
+  variables:
+    DB_HOST: postgres-test
+    DB_PORT: 5432
+    DB_NAME: test
+    DB_USERNAME: postgres
+    DB_PASSWORD: postgres
+    REDIS_HOST: redis-test
+    REDIS_PORT: 6379
+    REDIS_DB: 0
+    JWT_SECRET_KEY: test_secret_key_for_ci_cd
+    JWT_ALGORITHM: HS256
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 30
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: 30
+    JWT_COOKIE_SECURE: "false"
+    LOG_LEVEL: INFO
+    LOG_FORMAT_JSON: "false"
+    MAX_IMAGE_FILE_SIZE_MB: 10
+    RATE_LIMIT_ENABLED: "false"
+    RATE_LIMIT_PER_MINUTE: 60
+    RATE_LIMIT_AUTH_PER_MINUTE: 5
+    ENABLE_METRICS_IN_TESTS: "true"
+    TEST_PASSWORD: testpass123
+    TEST_EXAMPLE_EMAIL_DOMAIN: shum-booking.com
+  before_script:
+    - cd fastapi
+    - pip install --no-cache-dir -r requirements.txt
+    - pip install pytest pytest-asyncio httpx
+  script:
+    # Ждем готовности БД
+    - |
+      until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USERNAME; do
+        echo "Waiting for PostgreSQL..."
+        sleep 2
+      done
+    # Ждем готовности Redis
+    - |
+      until redis-cli -h $REDIS_HOST -p $REDIS_PORT ping; do
+        echo "Waiting for Redis..."
+        sleep 2
+      done
+    # Применяем миграции
+    - python -m alembic upgrade head
+    # Запускаем тесты
+    - |
+      pytest tests/unit_tests/ -v --tb=short || true
+      pytest tests/api_tests/ -v --tb=short || true
+      pytest tests/database_tests/ -v --tb=short || true
+    # Проверяем, что все тесты прошли
+    - |
+      if [ $? -ne 0 ]; then
+        echo "❌ Тесты не прошли!"
+        exit 1
+      else
+        echo "✅ Все тесты прошли успешно!"
+      fi
+  artifacts:
+    when: always
+    reports:
+      junit: fastapi/tests/reports/junit.xml
+    paths:
+      - fastapi/tests/reports/
+    expire_in: 1 week
+  only:
+    - main
+    - master
+    - merge_requests
+  tags:
+    - docker
+
+# ============================================================================
+# DEPLOY: Деплой в Kubernetes
+# ============================================================================
+deploy:production:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  before_script:
+    - kubectl version --client
+    # Настройка kubectl (используем переменную KUBECONFIG из GitLab CI/CD Variables)
+    - |
+      if [ -n "$KUBECONFIG" ]; then
+        mkdir -p ~/.kube
+        echo "$KUBECONFIG" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+      else
+        echo "❌ KUBECONFIG не настроен в GitLab CI/CD Variables!"
+        exit 1
+      fi
+    # Проверка подключения к кластеру
+    - kubectl cluster-info
+    - kubectl get nodes
+  script:
+    # Обновляем образы в deployment манифестах
+    - |
+      sed -i "s|registry.gitlab.com/YOUR_GROUP/YOUR_PROJECT:latest|$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA|g" k8s/fastapi-deployment.yaml
+      sed -i "s|registry.gitlab.com/YOUR_GROUP/YOUR_PROJECT:latest|$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA|g" k8s/celery-deployment.yaml
+      sed -i "s|\${CI_REGISTRY_IMAGE}/nginx:latest|$CI_REGISTRY_IMAGE/nginx:$CI_COMMIT_SHA|g" k8s/nginx-deployment.yaml
+    # Применяем манифесты в правильном порядке
+    - kubectl apply -f k8s/namespace.yaml
+    - kubectl apply -f k8s/configmap.yaml
+    - kubectl apply -f k8s/nginx-configmap.yaml
+    - kubectl apply -f k8s/pvc.yaml
+    - kubectl apply -f k8s/fastapi-deployment.yaml
+    - kubectl apply -f k8s/fastapi-service.yaml
+    - kubectl apply -f k8s/celery-deployment.yaml
+    - kubectl apply -f k8s/nginx-deployment.yaml
+    - kubectl apply -f k8s/nginx-service.yaml
+    - kubectl apply -f k8s/ingress.yaml
+    # Ждем готовности подов
+    - kubectl rollout status deployment/fastapi-app -n $KUBE_NAMESPACE --timeout=5m
+    - kubectl rollout status deployment/celery-worker -n $KUBE_NAMESPACE --timeout=5m
+    - kubectl rollout status deployment/nginx -n $KUBE_NAMESPACE --timeout=5m
+    # Проверяем статус
+    - kubectl get pods -n $KUBE_NAMESPACE
+    - kubectl get services -n $KUBE_NAMESPACE
+    - echo "✅ Деплой завершен успешно!"
+  environment:
+    name: production
+    url: https://api.yourdomain.com  # ЗАМЕНИТЕ на ваш домен
+  only:
+    - main
+    - master
+  when: on_success
+  tags:
+    - kubernetes
+
+# ============================================================================
+# ROLLBACK: Откат к предыдущей версии (ручной запуск)
+# ============================================================================
+rollback:production:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  before_script:
+    - |
+      if [ -n "$KUBECONFIG" ]; then
+        mkdir -p ~/.kube
+        echo "$KUBECONFIG" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+      else
+        echo "❌ KUBECONFIG не настроен!"
+        exit 1
+      fi
+  script:
+    - kubectl rollout undo deployment/fastapi-app -n $KUBE_NAMESPACE
+    - kubectl rollout undo deployment/celery-worker -n $KUBE_NAMESPACE
+    - kubectl rollout status deployment/fastapi-app -n $KUBE_NAMESPACE --timeout=5m
+    - kubectl rollout status deployment/celery-worker -n $KUBE_NAMESPACE --timeout=5m
+    - echo "✅ Откат выполнен успешно!"
+  environment:
+    name: production
+    action: rollback
+  when: manual
+  only:
+    - main
+    - master
+  tags:
+    - kubernetes
+

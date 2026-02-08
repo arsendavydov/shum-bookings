@@ -1,0 +1,11 @@
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+README.md
+
+# CI/CD
+.gitlab-ci.yml
+

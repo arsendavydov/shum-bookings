@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: booking-ingress
+  namespace: booking
+  annotations:
+    # Для nginx ingress controller
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # Для Let's Encrypt (cert-manager)
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # ЗАМЕНИТЕ на ваш ClusterIssuer
+    # Размер тела запроса (для загрузки изображений)
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    # Таймауты
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+spec:
+  ingressClassName: nginx  # ЗАМЕНИТЕ на ваш ingress class
+  tls:
+  - hosts:
+    - api.yourdomain.com  # ЗАМЕНИТЕ на ваш домен
+    secretName: booking-tls
+  rules:
+  - host: api.yourdomain.com  # ЗАМЕНИТЕ на ваш домен
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-service  # Теперь Ingress указывает на nginx, который проксирует на FastAPI
+            port:
+              number: 80
+

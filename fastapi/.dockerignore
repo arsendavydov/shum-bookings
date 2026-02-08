@@ -1,0 +1,83 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+tests/
+test_*.py
+*_test.py
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Environment files
+.env
+.local.env
+.test.env
+.prod.env
+.ci.env
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+*.md
+!README.md
+
+# CI/CD
+.gitlab-ci.yml
+.github/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Static files (будут создаваться в контейнере)
+src/static/images/*
+!src/static/images/.gitkeep
+src/static/temp/*
+
+# Migrations (будут применяться при старте)
+# migrations/ - оставляем, они нужны для миграций
+
+# Scripts (не нужны в продакшене)
+scripts/
+
+# Load tests
+load_tests/
+

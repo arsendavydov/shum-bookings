@@ -19,12 +19,20 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        tag: "{{.Name}}"
+        labels: "service=postgres"
 
   redis:
     image: redis:7-alpine
     container_name: redis_booking
     ports:
       - "6379:6379"
+    command: redis-server --loglevel notice  # Уменьшаем уровень логирования
     networks:
       - booking
     restart: unless-stopped
@@ -33,6 +41,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        tag: "{{.Name}}"
+        labels: "service=redis"
 
   fastapi:
     build:
@@ -43,8 +58,8 @@ services:
     volumes:
       - ./fastapi:/app
       - temp_files_volume:/app/src/static/temp
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"  # Изменили на expose, так как доступ через nginx
     command: >
         python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload --no-access-log --reload-exclude 'logs/*' --reload-exclude '*.log' --reload-exclude '__pycache__/*' --reload-exclude '*.pyc'
     networks:
@@ -58,6 +73,29 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - LOG_FORMAT_JSON=true
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: nginx_app
+    ports:
+      - "8000:80"  # Nginx теперь на порту 8000
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - images_volume:/usr/share/nginx/html/images
+    networks:
+      - booking
+    restart: unless-stopped
+    depends_on:
+      - fastapi
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        tag: "{{.Name}}"
+        labels: "service=nginx"
 
   celery:
     build:
@@ -85,12 +123,21 @@ services:
       - .local.env
     environment:
       - PYTHONUNBUFFERED=1
+      - LOG_FORMAT_JSON=true  # JSON логи для Celery
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        tag: "{{.Name}}"
 
 volumes:
   postgres_data:
     name: postgres_data
   temp_files_volume:
     name: temp_files_volume
+  images_volume:
+    name: images_volume
 
 networks:
   booking:

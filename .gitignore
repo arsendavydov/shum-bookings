@@ -2,7 +2,14 @@
 postgres_data/
 
 # Environment variables
-*.env
+.env
+.local.env
+.test.env
+.prod.env
+.ci.env
+# Шаблоны НЕ игнорируем (их нужно коммитить):
+# !.prod.env.template
+# !.ci.env.template
 .fastapicloud/
 
 # Python
