@@ -3,7 +3,7 @@
 
 set -e
 
-GITLAB_URL="git@gitlab.com:arsen-davydov-main/shum-booking.git"
+GITLAB_URL="git@gitlab.com:shum-bookin/shum-booking.git"
 
 echo "🔧 Настройка GitLab remote..."
 echo ""

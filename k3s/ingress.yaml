@@ -5,15 +5,15 @@ metadata:
   namespace: booking
   annotations:
     # Для nginx ingress controller
-    # Временно отключено SSL redirect (включить после настройки cert-manager)
-    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    # nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # SSL redirect (включено после настройки cert-manager)
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     # Rewrite path: убираем префикс /apps/shum-booking при проксировании
     # Запрос /apps/shum-booking/api/users -> /api/users
     nginx.ingress.kubernetes.io/rewrite-target: /$2
     nginx.ingress.kubernetes.io/use-regex: "true"
     # Для Let's Encrypt (cert-manager)
-    # cert-manager.io/cluster-issuer: "letsencrypt-prod"  # Включить после установки cert-manager
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # Автоматическое получение сертификатов
     # Размер тела запроса (для загрузки изображений)
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
     # Таймауты
@@ -22,14 +22,14 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
 spec:
   ingressClassName: nginx
-  # TLS временно отключен (включить после настройки cert-manager)
-  # tls:
-  # - hosts:
-  #   - async-black.ru
-  #   secretName: booking-tls
+  # TLS включен - cert-manager автоматически создаст сертификат
+  tls:
+  - hosts:
+    - ${DOMAIN:-async-black.ru}
+    secretName: booking-tls  # cert-manager создаст этот secret автоматически
   rules:
   # DNS настроен: async-black.ru -> 188.120.244.162
-  - host: async-black.ru
+  - host: ${DOMAIN:-async-black.ru}
     http:
       paths:
       - path: /apps/shum-booking(/|$)(.*)

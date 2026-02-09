@@ -3,7 +3,7 @@
 
 set -e
 
-GITLAB_REPO="arsen-davydov-main/shum-booking"
+GITLAB_REPO="shum-bookin/shum-booking"
 GITLAB_URL="https://gitlab.com/${GITLAB_REPO}.git"
 
 echo "🔐 Настройка GitLab через Personal Access Token"

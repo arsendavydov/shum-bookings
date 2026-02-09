@@ -72,7 +72,7 @@ fi
 echo ""
 echo "📝 Инструкция по добавлению в GitLab:"
 echo ""
-echo "1. Откройте: https://gitlab.com/arsen-davydov-main/shum_booking_v2/-/settings/ci_cd"
+echo "1. Откройте: https://gitlab.com/shum-bookin/shum-booking/-/settings/ci_cd"
 echo "2. Раскройте секцию 'Variables'"
 echo "3. Нажмите 'Add variable'"
 echo "4. Заполните:"
