@@ -18,6 +18,8 @@ spec:
         app: nginx
         component: reverse-proxy
     spec:
+      imagePullSecrets:
+      - name: gitlab-registry-secret
       containers:
       - name: nginx
         image: ${CI_REGISTRY_IMAGE}/nginx:latest  # Будет заменено в CI/CD pipeline

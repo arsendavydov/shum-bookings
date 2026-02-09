@@ -18,6 +18,8 @@ spec:
         app: celery-worker
         component: worker
     spec:
+      imagePullSecrets:
+      - name: gitlab-registry-secret
       containers:
       - name: celery
         image: registry.gitlab.com/arsen-davydov-main/shum_booking_v2:latest  # Обновляется автоматически в CI/CD

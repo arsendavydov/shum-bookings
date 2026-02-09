@@ -18,6 +18,8 @@ spec:
         app: fastapi-app
         component: api
     spec:
+      imagePullSecrets:
+      - name: gitlab-registry-secret
       containers:
       - name: fastapi
         image: registry.gitlab.com/arsen-davydov-main/shum_booking_v2:latest  # Обновляется автоматически в CI/CD

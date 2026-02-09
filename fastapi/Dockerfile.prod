@@ -28,7 +28,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Создаем непривилегированного пользователя
-RUN groupadd -r appuser && useradd -r -g appuser -u 1000 appuser
+RUN groupadd -r appuser && useradd -r -g appuser -u 1000 appuser -m
+
+# Копируем пакеты в домашнюю директорию пользователя для доступа
+RUN cp -r /root/.local /home/appuser/.local && \
+    chown -R appuser:appuser /home/appuser/.local
 
 # Копируем код приложения
 COPY . .
@@ -40,8 +44,8 @@ RUN mkdir -p /app/src/static/images /app/src/static/temp /app/logs && \
 # Переключаемся на непривилегированного пользователя
 USER appuser
 
-# Добавляем /root/.local/bin в PATH для доступа к установленным пакетам
-ENV PATH=/root/.local/bin:$PATH
+# Добавляем /home/appuser/.local/bin в PATH для доступа к установленным пакетам
+ENV PATH=/home/appuser/.local/bin:$PATH
 
 # Переменные окружения
 ENV PYTHONUNBUFFERED=1 \
