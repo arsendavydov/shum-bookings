@@ -7,7 +7,7 @@ metadata:
     app: redis
     component: cache
 spec:
-  replicas: 1  # Redis обычно один экземпляр (можно настроить репликацию отдельно)
+  replicas: ${REDIS_REPLICAS:-1}  # Берется из переменной окружения GitLab CI/CD
   selector:
     matchLabels:
       app: redis
@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: redis
-        image: redis:7-alpine
+        image: ${REDIS_IMAGE_TAG:-redis:7-alpine}  # Берется из переменной окружения GitLab CI/CD
         ports:
         - containerPort: 6379
           name: redis
@@ -46,11 +46,11 @@ spec:
           mountPath: /data
         resources:
           requests:
-            memory: "64Mi"
-            cpu: "20m"
+            memory: "${REDIS_MEMORY_REQUEST:-64Mi}"
+            cpu: "${REDIS_CPU_REQUEST:-20m}"
           limits:
-            memory: "128Mi"
-            cpu: "40m"
+            memory: "${REDIS_MEMORY_LIMIT:-128Mi}"
+            cpu: "${REDIS_CPU_LIMIT:-40m}"
         livenessProbe:
           exec:
             command:
@@ -62,10 +62,10 @@ spec:
               else
                 redis-cli ping
               fi
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
+          initialDelaySeconds: ${HEALTH_CHECK_INITIAL_DELAY:-30}
+          periodSeconds: ${HEALTH_CHECK_PERIOD:-10}
+          timeoutSeconds: ${HEALTH_CHECK_TIMEOUT:-5}
+          failureThreshold: ${HEALTH_CHECK_FAILURE_THRESHOLD:-3}
         readinessProbe:
           exec:
             command:
@@ -77,10 +77,10 @@ spec:
               else
                 redis-cli ping
               fi
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 3
+          initialDelaySeconds: ${HEALTH_CHECK_READINESS_INITIAL_DELAY:-10}
+          periodSeconds: ${HEALTH_CHECK_READINESS_PERIOD:-5}
+          timeoutSeconds: ${HEALTH_CHECK_TIMEOUT:-5}
+          failureThreshold: ${HEALTH_CHECK_FAILURE_THRESHOLD:-3}
       volumes:
       - name: redis-data
         persistentVolumeClaim:
@@ -100,7 +100,7 @@ spec:
   storageClassName: standard  # Используется local-path в K3s
   resources:
     requests:
-      storage: 5Gi  # Размер диска для Redis
+      storage: ${REDIS_STORAGE_SIZE:-5Gi}  # Берется из переменной окружения GitLab CI/CD
 ---
 apiVersion: v1
 kind: Service

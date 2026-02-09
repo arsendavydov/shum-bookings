@@ -9,5 +9,5 @@ spec:
   storageClassName: standard  # Используется local-path в K3s
   resources:
     requests:
-      storage: 5Gi  # Уменьшено для low-resource сервера
+      storage: ${IMAGES_STORAGE_SIZE:-5Gi}  # Берется из переменной окружения GitLab CI/CD
 

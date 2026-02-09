@@ -7,7 +7,7 @@ metadata:
     app: nginx
     component: reverse-proxy
 spec:
-  replicas: 1  # Уменьшено для сервера с ограниченными ресурсами
+  replicas: ${NGINX_REPLICAS:-1}  # Берется из переменной окружения GitLab CI/CD
   selector:
     matchLabels:
       app: nginx
@@ -37,26 +37,26 @@ spec:
           subPath: nginx.conf
         resources:
           requests:
-            memory: "32Mi"
-            cpu: "10m"
+            memory: "${NGINX_MEMORY_REQUEST:-32Mi}"
+            cpu: "${NGINX_CPU_REQUEST:-10m}"
           limits:
-            memory: "64Mi"
-            cpu: "20m"
+            memory: "${NGINX_MEMORY_LIMIT:-64Mi}"
+            cpu: "${NGINX_CPU_LIMIT:-20m}"
         livenessProbe:
           httpGet:
             path: /health
             port: 80
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 3
-          failureThreshold: 3
+          initialDelaySeconds: ${HEALTH_CHECK_READINESS_INITIAL_DELAY:-10}
+          periodSeconds: ${HEALTH_CHECK_PERIOD:-10}
+          timeoutSeconds: ${HEALTH_CHECK_TIMEOUT:-5}
+          failureThreshold: ${HEALTH_CHECK_FAILURE_THRESHOLD:-3}
         readinessProbe:
           tcpSocket:
             port: 80
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 2
-          failureThreshold: 3
+          initialDelaySeconds: ${HEALTH_CHECK_READINESS_INITIAL_DELAY:-5}
+          periodSeconds: ${HEALTH_CHECK_READINESS_PERIOD:-5}
+          timeoutSeconds: ${HEALTH_CHECK_TIMEOUT:-5}
+          failureThreshold: ${HEALTH_CHECK_FAILURE_THRESHOLD:-3}
       volumes:
       - name: images-storage
         persistentVolumeClaim:

@@ -8,7 +8,7 @@ metadata:
     component: database
 spec:
   serviceName: postgres-service
-  replicas: 1  # PostgreSQL обычно один экземпляр (можно настроить репликацию отдельно)
+  replicas: ${POSTGRES_REPLICAS:-1}  # Берется из переменной окружения GitLab CI/CD
   selector:
     matchLabels:
       app: postgres
@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: postgres
-        image: postgres:16
+        image: ${POSTGRES_IMAGE_TAG:-postgres:16}  # Берется из переменной окружения GitLab CI/CD
         ports:
         - containerPort: 5432
           name: postgres
@@ -49,31 +49,31 @@ spec:
           mountPath: /var/lib/postgresql/data
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "40m"
+            memory: "${POSTGRES_MEMORY_REQUEST:-128Mi}"
+            cpu: "${POSTGRES_CPU_REQUEST:-40m}"
           limits:
-            memory: "256Mi"
-            cpu: "60m"
+            memory: "${POSTGRES_MEMORY_LIMIT:-256Mi}"
+            cpu: "${POSTGRES_CPU_LIMIT:-60m}"
         livenessProbe:
           exec:
             command:
             - /bin/sh
             - -c
             - pg_isready -U $(POSTGRES_USER) -d $(POSTGRES_DB)
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
+          initialDelaySeconds: ${HEALTH_CHECK_INITIAL_DELAY:-30}
+          periodSeconds: ${HEALTH_CHECK_PERIOD:-10}
+          timeoutSeconds: ${HEALTH_CHECK_TIMEOUT:-5}
+          failureThreshold: ${HEALTH_CHECK_FAILURE_THRESHOLD:-3}
         readinessProbe:
           exec:
             command:
             - /bin/sh
             - -c
             - pg_isready -U $(POSTGRES_USER) -d $(POSTGRES_DB)
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 5
+          initialDelaySeconds: ${HEALTH_CHECK_INITIAL_DELAY:-30}
+          periodSeconds: ${HEALTH_CHECK_PERIOD:-10}
+          timeoutSeconds: ${HEALTH_CHECK_TIMEOUT:-5}
+          failureThreshold: ${HEALTH_CHECK_FAILURE_THRESHOLD:-5}
   volumeClaimTemplates:
   - metadata:
       name: postgres-data
@@ -82,7 +82,7 @@ spec:
       storageClassName: standard  # Используется local-path в K3s
       resources:
         requests:
-          storage: 20Gi  # Размер диска для БД
+          storage: ${POSTGRES_STORAGE_SIZE:-20Gi}  # Берется из переменной окружения GitLab CI/CD
 ---
 apiVersion: v1
 kind: Service

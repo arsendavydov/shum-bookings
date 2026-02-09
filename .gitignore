@@ -76,3 +76,6 @@ logs/
 *.md
 *.txt
 test_api.py
+
+# Пользовательские тесты и скрипты
+user_tests/

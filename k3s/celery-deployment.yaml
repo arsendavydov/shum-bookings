@@ -7,7 +7,7 @@ metadata:
     app: celery-worker
     component: worker
 spec:
-  replicas: 1  # Количество воркеров (можно увеличить)
+  replicas: ${CELERY_REPLICAS:-1}  # Берется из переменной окружения GitLab CI/CD
   selector:
     matchLabels:
       app: celery-worker
@@ -131,8 +131,8 @@ spec:
           mountPath: /app/src/static/temp
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "15m"
+            memory: "${CELERY_MEMORY_REQUEST:-128Mi}"
+            cpu: "${CELERY_CPU_REQUEST:-15m}"
           # Убраны limits - под может использовать столько памяти, сколько нужно (в пределах доступной на ноде)
       volumes:
       - name: images-storage
