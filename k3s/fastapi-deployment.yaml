@@ -146,9 +146,7 @@ spec:
           requests:
             memory: "256Mi"
             cpu: "20m"
-          limits:
-            memory: "512Mi"
-            cpu: "40m"
+          # Убраны limits - под может использовать столько памяти, сколько нужно (в пределах доступной на ноде)
         livenessProbe:
           httpGet:
             path: /live

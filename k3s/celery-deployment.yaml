@@ -113,9 +113,7 @@ spec:
           requests:
             memory: "128Mi"
             cpu: "15m"
-          limits:
-            memory: "256Mi"
-            cpu: "30m"
+          # Убраны limits - под может использовать столько памяти, сколько нужно (в пределах доступной на ноде)
       volumes:
       - name: images-storage
         persistentVolumeClaim:
