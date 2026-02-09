@@ -88,18 +88,32 @@ deploy:production:
       chmod 600 ~/.ssh/k3s_key
       ssh-keyscan -H $K3S_SERVER_IP >> ~/.ssh/known_hosts 2>/dev/null || true
     # Настройка kubectl через SSH туннель
+    # Получаем kubeconfig с сервера через SSH (проще, чем хранить в переменных)
     - |
-      if [ -n "$KUBECONFIG_BASE64" ]; then
-        mkdir -p ~/.kube
-        echo "$KUBECONFIG_BASE64" | base64 -d > ~/.kube/config
+      echo "📥 Получение kubeconfig с сервера..."
+      mkdir -p ~/.kube
+      # Пытаемся получить kubeconfig с разных возможных путей
+      if ssh -i ~/.ssh/k3s_key \
+          -o StrictHostKeyChecking=no \
+          -o ConnectTimeout=10 \
+          -o BatchMode=yes \
+          $K3S_SSH_USER@$K3S_SERVER_IP "test -f ~/.kube/config && cat ~/.kube/config" > ~/.kube/config 2>/dev/null; then
+        echo "✅ Kubeconfig получен из ~/.kube/config"
+      elif ssh -i ~/.ssh/k3s_key \
+          -o StrictHostKeyChecking=no \
+          -o ConnectTimeout=10 \
+          -o BatchMode=yes \
+          $K3S_SSH_USER@$K3S_SERVER_IP "sudo cat /etc/rancher/k3s/k3s.yaml" > ~/.kube/config 2>/dev/null; then
+        echo "✅ Kubeconfig получен из /etc/rancher/k3s/k3s.yaml"
         # Заменяем localhost на IP сервера для SSH туннеля
         sed -i "s|server: https://127.0.0.1:6443|server: https://$K3S_SERVER_IP:6443|g" ~/.kube/config
-        chmod 600 ~/.kube/config
-        export KUBECONFIG=~/.kube/config
       else
-        echo "❌ KUBECONFIG_BASE64 не настроен!"
+        echo "❌ Не удалось получить kubeconfig с сервера!"
+        echo "   Проверьте доступ к серверу и наличие kubeconfig"
         exit 1
       fi
+      chmod 600 ~/.kube/config
+      export KUBECONFIG=~/.kube/config
     # Создаем SSH туннель в фоне с проверкой
     - |
       echo "🔗 Создание SSH туннеля к K3s API..."
@@ -681,16 +695,39 @@ rollback:production:
   stage: deploy
   image: alpine/k8s:1.28.0
   before_script:
+    - apk add --no-cache openssh-client
     - |
-      if [ -n "$KUBECONFIG_BASE64" ]; then
-        mkdir -p ~/.kube
-        echo "$KUBECONFIG_BASE64" | base64 -d > ~/.kube/config
-        chmod 600 ~/.kube/config
-        export KUBECONFIG=~/.kube/config
-      else
-        echo "❌ KUBECONFIG_BASE64 не настроен!"
+      # Настройка SSH для получения kubeconfig
+      if [ -z "$K3S_SSH_KEY_BASE64" ] || [ -z "$K3S_SERVER_IP" ] || [ -z "$K3S_SSH_USER" ]; then
+        echo "❌ K3S_SSH_KEY_BASE64, K3S_SERVER_IP или K3S_SSH_USER не настроены!"
         exit 1
       fi
+      mkdir -p ~/.ssh
+      echo "$K3S_SSH_KEY_BASE64" | base64 -d > ~/.ssh/k3s_key
+      chmod 600 ~/.ssh/k3s_key
+      ssh-keyscan -H $K3S_SERVER_IP >> ~/.ssh/known_hosts 2>/dev/null || true
+    - |
+      # Получаем kubeconfig с сервера через SSH
+      mkdir -p ~/.kube
+      if ssh -i ~/.ssh/k3s_key \
+          -o StrictHostKeyChecking=no \
+          -o ConnectTimeout=10 \
+          -o BatchMode=yes \
+          $K3S_SSH_USER@$K3S_SERVER_IP "test -f ~/.kube/config && cat ~/.kube/config" > ~/.kube/config 2>/dev/null; then
+        echo "✅ Kubeconfig получен"
+      elif ssh -i ~/.ssh/k3s_key \
+          -o StrictHostKeyChecking=no \
+          -o ConnectTimeout=10 \
+          -o BatchMode=yes \
+          $K3S_SSH_USER@$K3S_SERVER_IP "sudo cat /etc/rancher/k3s/k3s.yaml" > ~/.kube/config 2>/dev/null; then
+        echo "✅ Kubeconfig получен из /etc/rancher/k3s/k3s.yaml"
+        sed -i "s|server: https://127.0.0.1:6443|server: https://$K3S_SERVER_IP:6443|g" ~/.kube/config
+      else
+        echo "❌ Не удалось получить kubeconfig с сервера!"
+        exit 1
+      fi
+      chmod 600 ~/.kube/config
+      export KUBECONFIG=~/.kube/config
   script:
     - kubectl rollout undo deployment/fastapi-app -n $KUBE_NAMESPACE
     - kubectl rollout undo deployment/celery-worker -n $KUBE_NAMESPACE
