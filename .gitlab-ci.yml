@@ -167,6 +167,44 @@ deploy:production:
       fi
     # Обновляем образы и подставляем переменные окружения в deployment манифестах
     - |
+      # Устанавливаем переменные с дефолтными значениями, если они не заданы
+      export FASTAPI_REPLICAS=${FASTAPI_REPLICAS:-1}
+      export CELERY_REPLICAS=${CELERY_REPLICAS:-1}
+      export NGINX_REPLICAS=${NGINX_REPLICAS:-1}
+      export POSTGRES_REPLICAS=${POSTGRES_REPLICAS:-1}
+      export REDIS_REPLICAS=${REDIS_REPLICAS:-1}
+      
+      export FASTAPI_MEMORY_REQUEST=${FASTAPI_MEMORY_REQUEST:-256Mi}
+      export FASTAPI_CPU_REQUEST=${FASTAPI_CPU_REQUEST:-20m}
+      export CELERY_MEMORY_REQUEST=${CELERY_MEMORY_REQUEST:-128Mi}
+      export CELERY_CPU_REQUEST=${CELERY_CPU_REQUEST:-15m}
+      export NGINX_MEMORY_REQUEST=${NGINX_MEMORY_REQUEST:-32Mi}
+      export NGINX_CPU_REQUEST=${NGINX_CPU_REQUEST:-10m}
+      export NGINX_MEMORY_LIMIT=${NGINX_MEMORY_LIMIT:-64Mi}
+      export NGINX_CPU_LIMIT=${NGINX_CPU_LIMIT:-20m}
+      export POSTGRES_MEMORY_REQUEST=${POSTGRES_MEMORY_REQUEST:-128Mi}
+      export POSTGRES_CPU_REQUEST=${POSTGRES_CPU_REQUEST:-40m}
+      export POSTGRES_MEMORY_LIMIT=${POSTGRES_MEMORY_LIMIT:-256Mi}
+      export POSTGRES_CPU_LIMIT=${POSTGRES_CPU_LIMIT:-60m}
+      export REDIS_MEMORY_REQUEST=${REDIS_MEMORY_REQUEST:-64Mi}
+      export REDIS_CPU_REQUEST=${REDIS_CPU_REQUEST:-20m}
+      export REDIS_MEMORY_LIMIT=${REDIS_MEMORY_LIMIT:-128Mi}
+      export REDIS_CPU_LIMIT=${REDIS_CPU_LIMIT:-40m}
+      
+      export POSTGRES_STORAGE_SIZE=${POSTGRES_STORAGE_SIZE:-20Gi}
+      export REDIS_STORAGE_SIZE=${REDIS_STORAGE_SIZE:-5Gi}
+      export IMAGES_STORAGE_SIZE=${IMAGES_STORAGE_SIZE:-5Gi}
+      
+      export POSTGRES_IMAGE_TAG=${POSTGRES_IMAGE_TAG:-postgres:16}
+      export REDIS_IMAGE_TAG=${REDIS_IMAGE_TAG:-redis:7-alpine}
+      
+      export HEALTH_CHECK_INITIAL_DELAY=${HEALTH_CHECK_INITIAL_DELAY:-30}
+      export HEALTH_CHECK_PERIOD=${HEALTH_CHECK_PERIOD:-10}
+      export HEALTH_CHECK_TIMEOUT=${HEALTH_CHECK_TIMEOUT:-5}
+      export HEALTH_CHECK_FAILURE_THRESHOLD=${HEALTH_CHECK_FAILURE_THRESHOLD:-3}
+      export HEALTH_CHECK_READINESS_INITIAL_DELAY=${HEALTH_CHECK_READINESS_INITIAL_DELAY:-10}
+      export HEALTH_CHECK_READINESS_PERIOD=${HEALTH_CHECK_READINESS_PERIOD:-5}
+      
       # Функция для подстановки переменных в YAML файлах
       substitute_vars() {
         local file=$1
@@ -175,43 +213,45 @@ deploy:production:
         sed -i "s|\${CI_REGISTRY_IMAGE}/nginx:latest|$CI_REGISTRY_IMAGE/nginx:$CI_COMMIT_SHA|g" "$file"
         
         # Kubernetes переменные (replicas, resources, storage, images, health checks)
-        sed -i "s|\${FASTAPI_REPLICAS:-1}|${FASTAPI_REPLICAS:-1}|g" "$file"
-        sed -i "s|\${CELERY_REPLICAS:-1}|${CELERY_REPLICAS:-1}|g" "$file"
-        sed -i "s|\${NGINX_REPLICAS:-1}|${NGINX_REPLICAS:-1}|g" "$file"
-        sed -i "s|\${POSTGRES_REPLICAS:-1}|${POSTGRES_REPLICAS:-1}|g" "$file"
-        sed -i "s|\${REDIS_REPLICAS:-1}|${REDIS_REPLICAS:-1}|g" "$file"
+        # Заменяем все варианты плейсхолдеров на фактические значения
+        sed -i "s|\${FASTAPI_REPLICAS:-1}|$FASTAPI_REPLICAS|g" "$file"
+        sed -i "s|\${CELERY_REPLICAS:-1}|$CELERY_REPLICAS|g" "$file"
+        sed -i "s|\${NGINX_REPLICAS:-1}|$NGINX_REPLICAS|g" "$file"
+        sed -i "s|\${POSTGRES_REPLICAS:-1}|$POSTGRES_REPLICAS|g" "$file"
+        sed -i "s|\${REDIS_REPLICAS:-1}|$REDIS_REPLICAS|g" "$file"
         
-        sed -i "s|\${FASTAPI_MEMORY_REQUEST:-256Mi}|${FASTAPI_MEMORY_REQUEST:-256Mi}|g" "$file"
-        sed -i "s|\${FASTAPI_CPU_REQUEST:-20m}|${FASTAPI_CPU_REQUEST:-20m}|g" "$file"
-        sed -i "s|\${CELERY_MEMORY_REQUEST:-128Mi}|${CELERY_MEMORY_REQUEST:-128Mi}|g" "$file"
-        sed -i "s|\${CELERY_CPU_REQUEST:-15m}|${CELERY_CPU_REQUEST:-15m}|g" "$file"
-        sed -i "s|\${NGINX_MEMORY_REQUEST:-32Mi}|${NGINX_MEMORY_REQUEST:-32Mi}|g" "$file"
-        sed -i "s|\${NGINX_CPU_REQUEST:-10m}|${NGINX_CPU_REQUEST:-10m}|g" "$file"
-        sed -i "s|\${NGINX_MEMORY_LIMIT:-64Mi}|${NGINX_MEMORY_LIMIT:-64Mi}|g" "$file"
-        sed -i "s|\${NGINX_CPU_LIMIT:-20m}|${NGINX_CPU_LIMIT:-20m}|g" "$file"
-        sed -i "s|\${POSTGRES_MEMORY_REQUEST:-128Mi}|${POSTGRES_MEMORY_REQUEST:-128Mi}|g" "$file"
-        sed -i "s|\${POSTGRES_CPU_REQUEST:-40m}|${POSTGRES_CPU_REQUEST:-40m}|g" "$file"
-        sed -i "s|\${POSTGRES_MEMORY_LIMIT:-256Mi}|${POSTGRES_MEMORY_LIMIT:-256Mi}|g" "$file"
-        sed -i "s|\${POSTGRES_CPU_LIMIT:-60m}|${POSTGRES_CPU_LIMIT:-60m}|g" "$file"
-        sed -i "s|\${REDIS_MEMORY_REQUEST:-64Mi}|${REDIS_MEMORY_REQUEST:-64Mi}|g" "$file"
-        sed -i "s|\${REDIS_CPU_REQUEST:-20m}|${REDIS_CPU_REQUEST:-20m}|g" "$file"
-        sed -i "s|\${REDIS_MEMORY_LIMIT:-128Mi}|${REDIS_MEMORY_LIMIT:-128Mi}|g" "$file"
-        sed -i "s|\${REDIS_CPU_LIMIT:-40m}|${REDIS_CPU_LIMIT:-40m}|g" "$file"
+        sed -i "s|\${FASTAPI_MEMORY_REQUEST:-256Mi}|$FASTAPI_MEMORY_REQUEST|g" "$file"
+        sed -i "s|\${FASTAPI_CPU_REQUEST:-20m}|$FASTAPI_CPU_REQUEST|g" "$file"
+        sed -i "s|\${CELERY_MEMORY_REQUEST:-128Mi}|$CELERY_MEMORY_REQUEST|g" "$file"
+        sed -i "s|\${CELERY_CPU_REQUEST:-15m}|$CELERY_CPU_REQUEST|g" "$file"
+        sed -i "s|\${NGINX_MEMORY_REQUEST:-32Mi}|$NGINX_MEMORY_REQUEST|g" "$file"
+        sed -i "s|\${NGINX_CPU_REQUEST:-10m}|$NGINX_CPU_REQUEST|g" "$file"
+        sed -i "s|\${NGINX_MEMORY_LIMIT:-64Mi}|$NGINX_MEMORY_LIMIT|g" "$file"
+        sed -i "s|\${NGINX_CPU_LIMIT:-20m}|$NGINX_CPU_LIMIT|g" "$file"
+        sed -i "s|\${POSTGRES_MEMORY_REQUEST:-128Mi}|$POSTGRES_MEMORY_REQUEST|g" "$file"
+        sed -i "s|\${POSTGRES_CPU_REQUEST:-40m}|$POSTGRES_CPU_REQUEST|g" "$file"
+        sed -i "s|\${POSTGRES_MEMORY_LIMIT:-256Mi}|$POSTGRES_MEMORY_LIMIT|g" "$file"
+        sed -i "s|\${POSTGRES_CPU_LIMIT:-60m}|$POSTGRES_CPU_LIMIT|g" "$file"
+        sed -i "s|\${REDIS_MEMORY_REQUEST:-64Mi}|$REDIS_MEMORY_REQUEST|g" "$file"
+        sed -i "s|\${REDIS_CPU_REQUEST:-20m}|$REDIS_CPU_REQUEST|g" "$file"
+        sed -i "s|\${REDIS_MEMORY_LIMIT:-128Mi}|$REDIS_MEMORY_LIMIT|g" "$file"
+        sed -i "s|\${REDIS_CPU_LIMIT:-40m}|$REDIS_CPU_LIMIT|g" "$file"
         
-        sed -i "s|\${POSTGRES_STORAGE_SIZE:-20Gi}|${POSTGRES_STORAGE_SIZE:-20Gi}|g" "$file"
-        sed -i "s|\${REDIS_STORAGE_SIZE:-5Gi}|${REDIS_STORAGE_SIZE:-5Gi}|g" "$file"
-        sed -i "s|\${IMAGES_STORAGE_SIZE:-5Gi}|${IMAGES_STORAGE_SIZE:-5Gi}|g" "$file"
+        sed -i "s|\${POSTGRES_STORAGE_SIZE:-20Gi}|$POSTGRES_STORAGE_SIZE|g" "$file"
+        sed -i "s|\${REDIS_STORAGE_SIZE:-5Gi}|$REDIS_STORAGE_SIZE|g" "$file"
+        sed -i "s|\${IMAGES_STORAGE_SIZE:-5Gi}|$IMAGES_STORAGE_SIZE|g" "$file"
         
-        sed -i "s|\${POSTGRES_IMAGE_TAG:-postgres:16}|${POSTGRES_IMAGE_TAG:-postgres:16}|g" "$file"
-        sed -i "s|\${REDIS_IMAGE_TAG:-redis:7-alpine}|${REDIS_IMAGE_TAG:-redis:7-alpine}|g" "$file"
+        sed -i "s|\${POSTGRES_IMAGE_TAG:-postgres:16}|$POSTGRES_IMAGE_TAG|g" "$file"
+        sed -i "s|\${REDIS_IMAGE_TAG:-redis:7-alpine}|$REDIS_IMAGE_TAG|g" "$file"
         
-        sed -i "s|\${HEALTH_CHECK_INITIAL_DELAY:-30}|${HEALTH_CHECK_INITIAL_DELAY:-30}|g" "$file"
-        sed -i "s|\${HEALTH_CHECK_PERIOD:-10}|${HEALTH_CHECK_PERIOD:-10}|g" "$file"
-        sed -i "s|\${HEALTH_CHECK_TIMEOUT:-5}|${HEALTH_CHECK_TIMEOUT:-5}|g" "$file"
-        sed -i "s|\${HEALTH_CHECK_FAILURE_THRESHOLD:-3}|${HEALTH_CHECK_FAILURE_THRESHOLD:-3}|g" "$file"
-        sed -i "s|\${HEALTH_CHECK_FAILURE_THRESHOLD:-5}|${HEALTH_CHECK_FAILURE_THRESHOLD:-5}|g" "$file"
-        sed -i "s|\${HEALTH_CHECK_READINESS_INITIAL_DELAY:-10}|${HEALTH_CHECK_READINESS_INITIAL_DELAY:-10}|g" "$file"
-        sed -i "s|\${HEALTH_CHECK_READINESS_PERIOD:-5}|${HEALTH_CHECK_READINESS_PERIOD:-5}|g" "$file"
+        sed -i "s|\${HEALTH_CHECK_INITIAL_DELAY:-30}|$HEALTH_CHECK_INITIAL_DELAY|g" "$file"
+        sed -i "s|\${HEALTH_CHECK_PERIOD:-10}|$HEALTH_CHECK_PERIOD|g" "$file"
+        sed -i "s|\${HEALTH_CHECK_TIMEOUT:-5}|$HEALTH_CHECK_TIMEOUT|g" "$file"
+        sed -i "s|\${HEALTH_CHECK_FAILURE_THRESHOLD:-3}|$HEALTH_CHECK_FAILURE_THRESHOLD|g" "$file"
+        sed -i "s|\${HEALTH_CHECK_FAILURE_THRESHOLD:-5}|$HEALTH_CHECK_FAILURE_THRESHOLD|g" "$file"
+        sed -i "s|\${HEALTH_CHECK_READINESS_INITIAL_DELAY:-10}|$HEALTH_CHECK_READINESS_INITIAL_DELAY|g" "$file"
+        sed -i "s|\${HEALTH_CHECK_READINESS_INITIAL_DELAY:-5}|$HEALTH_CHECK_READINESS_INITIAL_DELAY|g" "$file"
+        sed -i "s|\${HEALTH_CHECK_READINESS_PERIOD:-5}|$HEALTH_CHECK_READINESS_PERIOD|g" "$file"
       }
       
       echo "🔧 Подстановка переменных окружения в Kubernetes манифесты..."
