@@ -246,16 +246,73 @@ deploy:production:
       # Применяем манифесты в правильном порядке с проверкой туннеля
       check_tunnel && apply_with_retry k3s/namespace.yaml
       check_tunnel && apply_with_retry k3s/storageclass.yaml
-      # ConfigMap создается вручную через create-secrets.sh из .prod.env
-      # Не применяем configmap.yaml, так как он теперь шаблон
-      if ! kubectl get configmap booking-config -n $KUBE_NAMESPACE &>/dev/null; then
-        echo "⚠️  Warning: ConfigMap booking-config не найден!"
-        echo "   ConfigMap должен быть создан вручную на сервере через:"
-        echo "   ./k3s/create-secrets.sh"
-        echo "   Продолжаем деплой, но поды могут не запуститься..."
-      else
-        echo "✅ ConfigMap booking-config найден"
-      fi
+      # Создание ConfigMap и Secret из переменных GitLab CI/CD
+    - |
+      check_tunnel() {
+        if ! nc -z 127.0.0.1 6443 2>/dev/null; then
+          echo "⚠️  Туннель не работает, пересоздаем..."
+          pkill -f "ssh.*6443:127.0.0.1:6443" || true
+          sleep 2
+          ssh -i ~/.ssh/k3s_key \
+              -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=10 \
+              -o ServerAliveCountMax=10 \
+              -o ConnectTimeout=20 \
+              -o TCPKeepAlive=yes \
+              -o Compression=no \
+              -o BatchMode=yes \
+              -f -N -L 6443:127.0.0.1:6443 \
+              $K3S_SSH_USER@$K3S_SERVER_IP
+          sleep 3
+        fi
+      }
+      
+      check_api() {
+        local max_attempts=3
+        for i in $(seq 1 $max_attempts); do
+          if kubectl get --raw=/healthz --request-timeout=10s &>/dev/null; then
+            return 0
+          fi
+          sleep 2
+        done
+        return 0
+      }
+      
+      check_tunnel && check_api
+      
+      echo "📋 Создание ConfigMap booking-config из переменных GitLab CI/CD..."
+      
+      # Удаление существующего ConfigMap (если есть)
+      kubectl delete configmap booking-config -n $KUBE_NAMESPACE --ignore-not-found=true --request-timeout=30s || true
+      
+      # Создание ConfigMap с несекретными переменными из GitLab CI/CD Variables
+      # Используем значения по умолчанию, если переменные не заданы
+      kubectl create configmap booking-config \
+        --from-literal=DB_HOST="${DB_HOST:-postgres-service}" \
+        --from-literal=DB_PORT="${DB_PORT:-5432}" \
+        --from-literal=DB_NAME="${DB_NAME:-booking}" \
+        --from-literal=REDIS_HOST="${REDIS_HOST:-redis-service}" \
+        --from-literal=REDIS_PORT="${REDIS_PORT:-6379}" \
+        --from-literal=REDIS_DB="${REDIS_DB:-0}" \
+        --from-literal=JWT_ALGORITHM="${JWT_ALGORITHM:-HS256}" \
+        --from-literal=JWT_ACCESS_TOKEN_EXPIRE_MINUTES="${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}" \
+        --from-literal=JWT_REFRESH_TOKEN_EXPIRE_DAYS="${JWT_REFRESH_TOKEN_EXPIRE_DAYS:-30}" \
+        --from-literal=JWT_COOKIE_SECURE="${JWT_COOKIE_SECURE:-true}" \
+        --from-literal=LOG_LEVEL="${LOG_LEVEL:-INFO}" \
+        --from-literal=LOG_FORMAT_JSON="${LOG_FORMAT_JSON:-true}" \
+        --from-literal=MAX_IMAGE_FILE_SIZE_MB="${MAX_IMAGE_FILE_SIZE_MB:-10}" \
+        --from-literal=RATE_LIMIT_ENABLED="${RATE_LIMIT_ENABLED:-true}" \
+        --from-literal=RATE_LIMIT_PER_MINUTE="${RATE_LIMIT_PER_MINUTE:-60}" \
+        --from-literal=RATE_LIMIT_AUTH_PER_MINUTE="${RATE_LIMIT_AUTH_PER_MINUTE:-5}" \
+        --from-literal=PYTHONUNBUFFERED="${PYTHONUNBUFFERED:-1}" \
+        --from-literal=PYTHONDONTWRITEBYTECODE="${PYTHONDONTWRITEBYTECODE:-1}" \
+        --from-literal=ROOT_PATH="${ROOT_PATH:-/apps/shum-booking}" \
+        --namespace=$KUBE_NAMESPACE \
+        --request-timeout=30s || {
+          echo "⚠️  Не удалось создать ConfigMap, возможно он уже существует"
+        }
+      
+      echo "✅ ConfigMap booking-config создан/обновлен"
       check_tunnel && apply_with_retry k3s/nginx-configmap.yaml
     # Удаляем старый PVC если он существует с неправильными параметрами (accessModes нельзя изменить)
     - |
@@ -329,15 +386,69 @@ deploy:production:
         apply_with_retry k3s/pvc.yaml
         sleep 2
       fi
-    # Проверяем, что секреты существуют (должны быть созданы вручную через create-secrets.sh)
+    # Создание Secret из переменных GitLab CI/CD (секретные переменные)
     - |
-      if ! kubectl get secret booking-secrets -n $KUBE_NAMESPACE &>/dev/null; then
-        echo "⚠️  Warning: secret booking-secrets не найден!"
-        echo "   Секреты должны быть созданы вручную на сервере через:"
-        echo "   ./k3s/create-secrets.sh"
-        echo "   Продолжаем деплой, но PostgreSQL может не запуститься..."
+      check_tunnel() {
+        if ! nc -z 127.0.0.1 6443 2>/dev/null; then
+          echo "⚠️  Туннель не работает, пересоздаем..."
+          pkill -f "ssh.*6443:127.0.0.1:6443" || true
+          sleep 2
+          ssh -i ~/.ssh/k3s_key \
+              -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=10 \
+              -o ServerAliveCountMax=10 \
+              -o ConnectTimeout=20 \
+              -o TCPKeepAlive=yes \
+              -o Compression=no \
+              -o BatchMode=yes \
+              -f -N -L 6443:127.0.0.1:6443 \
+              $K3S_SSH_USER@$K3S_SERVER_IP
+          sleep 3
+        fi
+      }
+      
+      check_api() {
+        local max_attempts=3
+        for i in $(seq 1 $max_attempts); do
+          if kubectl get --raw=/healthz --request-timeout=10s &>/dev/null; then
+            return 0
+          fi
+          sleep 2
+        done
+        return 0
+      }
+      
+      check_tunnel && check_api
+      
+      echo "🔐 Создание Secret booking-secrets из переменных GitLab CI/CD..."
+      
+      # Проверка обязательных секретных переменных
+      if [ -z "$DB_PASSWORD" ] || [ -z "$JWT_SECRET_KEY" ]; then
+        echo "⚠️  Warning: DB_PASSWORD или JWT_SECRET_KEY не заданы в GitLab CI/CD Variables!"
+        echo "   Secret не будет создан/обновлен."
+        echo "   Убедитесь, что эти переменные настроены в GitLab CI/CD Settings > CI/CD > Variables"
+        if ! kubectl get secret booking-secrets -n $KUBE_NAMESPACE &>/dev/null; then
+          echo "❌ Secret booking-secrets не существует и не может быть создан без переменных!"
+          exit 1
+        else
+          echo "✅ Secret booking-secrets существует, используем существующий"
+        fi
       else
-        echo "✅ Secret booking-secrets найден"
+        # Удаление существующего Secret (если есть)
+        kubectl delete secret booking-secrets -n $KUBE_NAMESPACE --ignore-not-found=true --request-timeout=30s || true
+        
+        # Создание Secret с секретными переменными из GitLab CI/CD Secret Variables
+        kubectl create secret generic booking-secrets \
+          --from-literal=DB_USERNAME="${DB_USERNAME:-postgres}" \
+          --from-literal=DB_PASSWORD="$DB_PASSWORD" \
+          --from-literal=JWT_SECRET_KEY="$JWT_SECRET_KEY" \
+          --from-literal=REDIS_PASSWORD="${REDIS_PASSWORD:-}" \
+          --namespace=$KUBE_NAMESPACE \
+          --request-timeout=30s || {
+            echo "⚠️  Не удалось создать Secret, возможно он уже существует"
+          }
+        
+        echo "✅ Secret booking-secrets создан/обновлен"
       fi
     # Проверка PVC упрощена - просто проверяем что он существует
     - kubectl get pvc -n $KUBE_NAMESPACE || true
