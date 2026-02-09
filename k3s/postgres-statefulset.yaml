@@ -73,7 +73,7 @@ spec:
           initialDelaySeconds: ${HEALTH_CHECK_INITIAL_DELAY:-30}
           periodSeconds: ${HEALTH_CHECK_PERIOD:-10}
           timeoutSeconds: ${HEALTH_CHECK_TIMEOUT:-5}
-          failureThreshold: ${HEALTH_CHECK_FAILURE_THRESHOLD:-5}
+          failureThreshold: ${HEALTH_CHECK_FAILURE_THRESHOLD:-3}
   volumeClaimTemplates:
   - metadata:
       name: postgres-data

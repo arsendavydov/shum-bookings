@@ -209,6 +209,7 @@ deploy:production:
         sed -i "s|\${HEALTH_CHECK_PERIOD:-10}|${HEALTH_CHECK_PERIOD:-10}|g" "$file"
         sed -i "s|\${HEALTH_CHECK_TIMEOUT:-5}|${HEALTH_CHECK_TIMEOUT:-5}|g" "$file"
         sed -i "s|\${HEALTH_CHECK_FAILURE_THRESHOLD:-3}|${HEALTH_CHECK_FAILURE_THRESHOLD:-3}|g" "$file"
+        sed -i "s|\${HEALTH_CHECK_FAILURE_THRESHOLD:-5}|${HEALTH_CHECK_FAILURE_THRESHOLD:-5}|g" "$file"
         sed -i "s|\${HEALTH_CHECK_READINESS_INITIAL_DELAY:-10}|${HEALTH_CHECK_READINESS_INITIAL_DELAY:-10}|g" "$file"
         sed -i "s|\${HEALTH_CHECK_READINESS_PERIOD:-5}|${HEALTH_CHECK_READINESS_PERIOD:-5}|g" "$file"
       }
