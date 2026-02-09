@@ -74,8 +74,8 @@ data:
 
         # Rate limiting zones
         # Значения берутся из переменных окружения GitLab CI/CD во время деплоя
-        limit_req_zone $binary_remote_addr zone=api_limit:10m rate=${RATE_LIMIT_PER_MINUTE:-60}r/m;
-        limit_req_zone $binary_remote_addr zone=auth_limit:10m rate=${RATE_LIMIT_AUTH_PER_MINUTE:-5}r/m;
+        limit_req_zone $binary_remote_addr zone=api_limit:10m rate=${RATE_LIMIT_PER_MINUTE:-1000}r/m;
+        limit_req_zone $binary_remote_addr zone=auth_limit:10m rate=${RATE_LIMIT_AUTH_PER_MINUTE:-1000}r/m;
 
         # Upstream для FastAPI (используем короткое имя сервиса - Kubernetes DNS резолвит автоматически)
         upstream fastapi_backend {
