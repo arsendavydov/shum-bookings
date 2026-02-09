@@ -1,41 +1,25 @@
+# ============================================================================
+# ШАБЛОН CONFIGMAP ДЛЯ K3s
+# ============================================================================
+# ВАЖНО: Этот файл является шаблоном и НЕ используется напрямую!
+# ConfigMap создается автоматически из .prod.env через скрипт create-secrets.sh
+# 
+# Для создания ConfigMap из .prod.env выполните:
+#   ./k3s/create-secrets.sh
+#
+# Или создайте ConfigMap вручную:
+#   kubectl create configmap booking-config \
+#     --from-literal=DB_HOST=postgres-service \
+#     --from-literal=ROOT_PATH=/apps/shum-booking \
+#     ... (и т.д.)
+#     --namespace=booking
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: booking-config
   namespace: booking
 data:
-  # База данных
-  DB_HOST: "postgres-service"
-  DB_PORT: "5432"
-  DB_NAME: "booking"
-  
-  # Redis
-  REDIS_HOST: "redis-service"
-  REDIS_PORT: "6379"
-  REDIS_DB: "0"
-  
-  # JWT (несекретные настройки)
-  JWT_ALGORITHM: "HS256"
-  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "30"
-  JWT_REFRESH_TOKEN_EXPIRE_DAYS: "30"
-  JWT_COOKIE_SECURE: "true"
-  
-  # Логирование
-  LOG_LEVEL: "INFO"
-  LOG_FORMAT_JSON: "true"
-  
-  # Ограничения файлов
-  MAX_IMAGE_FILE_SIZE_MB: "10"
-  
-  # Rate Limiting
-  RATE_LIMIT_ENABLED: "true"
-  RATE_LIMIT_PER_MINUTE: "60"
-  RATE_LIMIT_AUTH_PER_MINUTE: "5"
-  
-  # Python
-  PYTHONUNBUFFERED: "1"
-  PYTHONDONTWRITEBYTECODE: "1"
-  
-  # Root path для работы за прокси (Ingress переписывает путь, но FastAPI должен знать префикс для OpenAPI)
-  ROOT_PATH: "/apps/shum-booking"
+  # Все значения берутся из .prod.env через скрипт create-secrets.sh
+  # Этот файл служит только как документация структуры ConfigMap
 

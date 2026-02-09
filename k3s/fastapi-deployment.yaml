@@ -115,6 +115,11 @@ spec:
             configMapKeyRef:
               name: booking-config
               key: PYTHONUNBUFFERED
+        - name: ROOT_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: ROOT_PATH
         # Из Secrets
         - name: DB_USERNAME
           valueFrom:

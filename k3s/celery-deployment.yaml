@@ -82,6 +82,21 @@ spec:
             configMapKeyRef:
               name: booking-config
               key: MAX_IMAGE_FILE_SIZE_MB
+        - name: JWT_ALGORITHM
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: JWT_ALGORITHM
+        - name: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        - name: JWT_COOKIE_SECURE
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: JWT_COOKIE_SECURE
         - name: PYTHONUNBUFFERED
           valueFrom:
             configMapKeyRef:
@@ -104,6 +119,11 @@ spec:
               name: booking-secrets
               key: REDIS_PASSWORD
               optional: true
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: booking-secrets
+              key: JWT_SECRET_KEY
         volumeMounts:
         - name: images-storage
           mountPath: /app/src/static/images
