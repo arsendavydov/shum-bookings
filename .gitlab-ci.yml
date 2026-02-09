@@ -278,14 +278,58 @@ deploy:production:
       sed -i "s|registry.gitlab.com/arsen-davydov-main/shum_booking_v2:latest|$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA|g" k3s/fastapi-deployment.yaml
       sed -i "s|registry.gitlab.com/arsen-davydov-main/shum_booking_v2:latest|$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA|g" k3s/celery-deployment.yaml
       sed -i "s|\${CI_REGISTRY_IMAGE}/nginx:latest|$CI_REGISTRY_IMAGE/nginx:$CI_COMMIT_SHA|g" k3s/nginx-deployment.yaml
-    # Применяем манифесты в правильном порядке
-    - kubectl apply -f k3s/namespace.yaml
-    - kubectl apply -f k3s/storageclass.yaml  # StorageClass для K3s
-    - kubectl apply -f k3s/configmap.yaml
-    - kubectl apply -f k3s/nginx-configmap.yaml
+    # Функция для проверки и пересоздания туннеля
+    - |
+      check_tunnel() {
+        if ! nc -z 127.0.0.1 6443 2>/dev/null; then
+          echo "⚠️  Туннель не работает, пересоздаем..."
+          pkill -f "ssh.*6443:127.0.0.1:6443" || true
+          sleep 2
+          ssh -i ~/.ssh/k3s_key \
+              -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=3 \
+              -o ConnectTimeout=10 \
+              -f -N -L 6443:127.0.0.1:6443 \
+              $K3S_SSH_USER@$K3S_SERVER_IP
+          sleep 3
+          # Проверяем еще раз
+          for i in {1..3}; do
+            if nc -z 127.0.0.1 6443 2>/dev/null; then
+              echo "✅ Туннель восстановлен"
+              return 0
+            fi
+            sleep 2
+          done
+          echo "❌ Не удалось восстановить туннель"
+          return 1
+        fi
+        return 0
+      }
+    # Функция для безопасного применения манифестов с retry
+    - |
+      apply_with_retry() {
+        local file=$1
+        local max_attempts=3
+        for i in $(seq 1 $max_attempts); do
+          if check_tunnel && kubectl apply -f "$file"; then
+            return 0
+          else
+            echo "⏳ Попытка $i/$max_attempts не удалась, повторяем..."
+            sleep 3
+          fi
+        done
+        echo "❌ Не удалось применить $file после $max_attempts попыток"
+        return 1
+      }
+    # Применяем манифесты в правильном порядке с проверкой туннеля
+    - apply_with_retry k3s/namespace.yaml
+    - apply_with_retry k3s/storageclass.yaml
+    - apply_with_retry k3s/configmap.yaml
+    - apply_with_retry k3s/nginx-configmap.yaml
     # Удаляем старый PVC если он существует с неправильными параметрами (accessModes нельзя изменить)
     - |
-      if kubectl get pvc booking-images-pvc -n $KUBE_NAMESPACE &>/dev/null; then
+      if check_tunnel && kubectl get pvc booking-images-pvc -n $KUBE_NAMESPACE &>/dev/null; then
         PVC_ACCESS_MODE=$(kubectl get pvc booking-images-pvc -n $KUBE_NAMESPACE -o jsonpath='{.spec.accessModes[0]}' 2>/dev/null || echo "")
         if [ "$PVC_ACCESS_MODE" != "ReadWriteOnce" ]; then
           echo "⚠️  PVC booking-images-pvc имеет неправильный accessMode: $PVC_ACCESS_MODE"
@@ -296,7 +340,7 @@ deploy:production:
           kubectl delete pvc booking-images-pvc -n $KUBE_NAMESPACE --ignore-not-found=true || true
           sleep 2
           echo "   Создаем новый PVC с правильными параметрами..."
-          kubectl apply -f k3s/pvc.yaml
+          apply_with_retry k3s/pvc.yaml
           echo "   Ждем создания PVC..."
           sleep 3
         else
@@ -304,7 +348,7 @@ deploy:production:
         fi
       else
         echo "📦 PVC booking-images-pvc не существует, создаем..."
-        kubectl apply -f k3s/pvc.yaml
+        apply_with_retry k3s/pvc.yaml
         sleep 2
       fi
     # Проверяем, что секреты существуют (должны быть созданы вручную через create-secrets.sh)
@@ -338,20 +382,19 @@ deploy:production:
         fi
       fi
     # База данных и кэш (должны быть первыми)
-    - kubectl apply -f k3s/postgres-statefulset.yaml
-    - kubectl apply -f k3s/redis-deployment.yaml
+    - apply_with_retry k3s/postgres-statefulset.yaml
+    - apply_with_retry k3s/redis-deployment.yaml
     # Приложение
-    # Удаляем старые deployment'ы для применения новых ресурсов (если нужно)
     - |
       echo "🔄 Применение deployment'ов с обновленными ресурсами..."
-      kubectl apply -f k3s/fastapi-deployment.yaml
-      kubectl apply -f k3s/fastapi-service.yaml
-      kubectl apply -f k3s/celery-deployment.yaml
+      apply_with_retry k3s/fastapi-deployment.yaml
+      apply_with_retry k3s/fastapi-service.yaml
+      apply_with_retry k3s/celery-deployment.yaml
     # Nginx
-    - kubectl apply -f k3s/nginx-deployment.yaml
-    - kubectl apply -f k3s/nginx-service.yaml
+    - apply_with_retry k3s/nginx-deployment.yaml
+    - apply_with_retry k3s/nginx-service.yaml
     # Ingress (последним)
-    - kubectl apply -f k3s/ingress.yaml
+    - apply_with_retry k3s/ingress.yaml
     # Проверяем, что секреты и конфигмапы существуют
     - kubectl get secrets -n $KUBE_NAMESPACE
     - kubectl get configmaps -n $KUBE_NAMESPACE
