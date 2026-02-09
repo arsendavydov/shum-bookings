@@ -49,6 +49,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     lifespan=lifespan,
+    root_path=settings.ROOT_PATH if settings.ROOT_PATH else None,  # Для работы за прокси с префиксом пути
     openapi_tags=[
         {"name": "Система", "description": "Эндпоинты для мониторинга состояния приложения"},
         {"name": "Аутентификация", "description": "Регистрация, вход и выход пользователей"},

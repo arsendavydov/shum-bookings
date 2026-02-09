@@ -35,4 +35,7 @@ data:
   # Python
   PYTHONUNBUFFERED: "1"
   PYTHONDONTWRITEBYTECODE: "1"
+  
+  # Root path для работы за прокси (Ingress переписывает путь, но FastAPI должен знать префикс для OpenAPI)
+  ROOT_PATH: "/apps/shum-booking"
 

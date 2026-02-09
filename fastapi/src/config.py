@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     # Метрики в тестах
     ENABLE_METRICS_IN_TESTS: bool = False  # Включить метрики в тестовом режиме (для тестов метрик)
 
+    # Root path для работы за прокси (например, /apps/shum-booking)
+    ROOT_PATH: str = ""  # Префикс пути для работы за reverse proxy
+
     model_config = SettingsConfigDict(
         env_file=env_file,  # None в Docker (переменные из os.environ), путь к файлу локально
         env_file_encoding="utf-8",
