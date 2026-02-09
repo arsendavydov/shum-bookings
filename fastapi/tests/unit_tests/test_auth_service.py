@@ -8,8 +8,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from src.services.auth import AuthService
 from src.schemas.users import UserRequestRegister
+from src.services.auth import AuthService
 
 pytestmark = pytest.mark.unit
 

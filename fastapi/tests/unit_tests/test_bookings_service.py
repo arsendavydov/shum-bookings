@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.exceptions.domain import DateValidationError, EntityNotFoundError, PermissionError, RoomAvailabilityError
-from src.models.bookings import BookingsOrm
 from src.models.rooms import RoomsOrm
 from src.schemas.bookings import SchemaBooking
 from src.services.bookings import BookingsService
@@ -47,7 +46,7 @@ class TestBookingsServiceCreateBooking:
         date_to = date.today() + timedelta(days=3)
 
         room = RoomsOrm(id=room_id, hotel_id=1, title="Номер", price=1000, quantity=5)
-        from datetime import datetime, UTC
+        from datetime import UTC, datetime
 
         expected_booking = SchemaBooking(
             id=1,
@@ -90,9 +89,11 @@ class TestBookingsServiceCreateBooking:
 
         bookings_service.session.execute = mock_execute
 
-        with patch("src.utils.db_manager.DBManager.get_bookings_repository", return_value=mock_bookings_repo):
-            with pytest.raises(EntityNotFoundError) as exc_info:
-                await bookings_service.create_booking(room_id, user_id, date_from, date_to)
+        with (
+            patch("src.utils.db_manager.DBManager.get_bookings_repository", return_value=mock_bookings_repo),
+            pytest.raises(EntityNotFoundError) as exc_info,
+        ):
+            await bookings_service.create_booking(room_id, user_id, date_from, date_to)
 
         assert "Номер" in str(exc_info.value)
         mock_bookings_repo.is_room_available.assert_not_called()
@@ -115,9 +116,11 @@ class TestBookingsServiceCreateBooking:
 
         bookings_service.session.execute = mock_execute
 
-        with patch("src.utils.db_manager.DBManager.get_bookings_repository", return_value=mock_bookings_repo):
-            with pytest.raises(DateValidationError) as exc_info:
-                await bookings_service.create_booking(room_id, user_id, date_from, date_to)
+        with (
+            patch("src.utils.db_manager.DBManager.get_bookings_repository", return_value=mock_bookings_repo),
+            pytest.raises(DateValidationError) as exc_info,
+        ):
+            await bookings_service.create_booking(room_id, user_id, date_from, date_to)
 
         assert "Дата заезда должна быть раньше даты выезда" in str(exc_info.value)
         mock_bookings_repo.is_room_available.assert_not_called()
@@ -140,9 +143,11 @@ class TestBookingsServiceCreateBooking:
 
         bookings_service.session.execute = mock_execute
 
-        with patch("src.utils.db_manager.DBManager.get_bookings_repository", return_value=mock_bookings_repo):
-            with pytest.raises(DateValidationError) as exc_info:
-                await bookings_service.create_booking(room_id, user_id, date_from, date_to)
+        with (
+            patch("src.utils.db_manager.DBManager.get_bookings_repository", return_value=mock_bookings_repo),
+            pytest.raises(DateValidationError) as exc_info,
+        ):
+            await bookings_service.create_booking(room_id, user_id, date_from, date_to)
 
         assert "Дата заезда должна быть раньше даты выезда" in str(exc_info.value)
         mock_bookings_repo.is_room_available.assert_not_called()
@@ -166,9 +171,11 @@ class TestBookingsServiceCreateBooking:
         bookings_service.session.execute = mock_execute
         mock_bookings_repo.is_room_available.return_value = False
 
-        with patch("src.utils.db_manager.DBManager.get_bookings_repository", return_value=mock_bookings_repo):
-            with pytest.raises(RoomAvailabilityError) as exc_info:
-                await bookings_service.create_booking(room_id, user_id, date_from, date_to)
+        with (
+            patch("src.utils.db_manager.DBManager.get_bookings_repository", return_value=mock_bookings_repo),
+            pytest.raises(RoomAvailabilityError) as exc_info,
+        ):
+            await bookings_service.create_booking(room_id, user_id, date_from, date_to)
 
         assert "Все номера данного типа уже забронированы" in str(exc_info.value)
         mock_bookings_repo.is_room_available.assert_called_once_with(room_id=room_id, date_from=date_from, date_to=date_to)
@@ -183,7 +190,7 @@ class TestBookingsServiceDeleteBooking:
         """Проверить успешное удаление бронирования."""
         booking_id = 1
         user_id = 1
-        from datetime import datetime, UTC
+        from datetime import UTC, datetime
 
         booking = SchemaBooking(
             id=booking_id,
@@ -226,7 +233,7 @@ class TestBookingsServiceDeleteBooking:
         booking_id = 1
         user_id = 1
         other_user_id = 2
-        from datetime import datetime, UTC
+        from datetime import UTC, datetime
 
         booking = SchemaBooking(
             id=booking_id,
@@ -240,9 +247,11 @@ class TestBookingsServiceDeleteBooking:
 
         mock_bookings_repo.get_by_id.return_value = booking
 
-        with patch("src.utils.db_manager.DBManager.get_bookings_repository", return_value=mock_bookings_repo):
-            with pytest.raises(PermissionError) as exc_info:
-                await bookings_service.delete_booking(booking_id, user_id)
+        with (
+            patch("src.utils.db_manager.DBManager.get_bookings_repository", return_value=mock_bookings_repo),
+            pytest.raises(PermissionError) as exc_info,
+        ):
+            await bookings_service.delete_booking(booking_id, user_id)
 
         assert "Недостаточно прав" in str(exc_info.value)
         mock_bookings_repo.get_by_id.assert_called_once_with(booking_id)
@@ -258,7 +267,7 @@ class TestBookingsServiceGetBookings:
         user_id = 1
         page = 1
         per_page = 10
-        from datetime import datetime, UTC
+        from datetime import UTC, datetime
 
         expected_bookings = [
             SchemaBooking(
@@ -285,7 +294,7 @@ class TestBookingsServiceGetBookings:
         """Проверить успешное получение всех бронирований."""
         page = 1
         per_page = 10
-        from datetime import datetime, UTC
+        from datetime import UTC, datetime
 
         expected_bookings = [
             SchemaBooking(

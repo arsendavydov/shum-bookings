@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Integer, String, Index
+from sqlalchemy import BigInteger, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.base import Base

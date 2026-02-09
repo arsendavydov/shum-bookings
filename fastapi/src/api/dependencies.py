@@ -105,7 +105,7 @@ DBDep = Annotated[AsyncSession, Depends(get_db)]
 
 
 def create_repository_dependency(
-    get_repo_method: Any, repo_type: type[Any]
+    get_repo_method: Any, repo_type: type[Any]  # noqa: ARG001
 ) -> tuple[Any, Any]:
     """
     Фабрика для создания функций зависимостей репозиториев.

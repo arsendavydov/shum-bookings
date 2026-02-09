@@ -68,9 +68,11 @@ class TestUsersServiceRegisterUser:
 
         mock_users_repo.exists_by_email.return_value = True
 
-        with patch("src.utils.db_manager.DBManager.get_users_repository", return_value=mock_users_repo):
-            with pytest.raises(EntityAlreadyExistsError) as exc_info:
-                await users_service.register_user(user_data)
+        with (
+            patch("src.utils.db_manager.DBManager.get_users_repository", return_value=mock_users_repo),
+            pytest.raises(EntityAlreadyExistsError) as exc_info,
+        ):
+            await users_service.register_user(user_data)
 
         assert "Пользователь" in str(exc_info.value)
         assert "email" in str(exc_info.value)
@@ -124,9 +126,11 @@ class TestUsersServiceUpdateUser:
 
         mock_users_repo.get_by_id.return_value = None
 
-        with patch("src.utils.db_manager.DBManager.get_users_repository", return_value=mock_users_repo):
-            with pytest.raises(EntityNotFoundError) as exc_info:
-                await users_service.update_user(user_id, user_data)
+        with (
+            patch("src.utils.db_manager.DBManager.get_users_repository", return_value=mock_users_repo),
+            pytest.raises(EntityNotFoundError) as exc_info,
+        ):
+            await users_service.update_user(user_id, user_data)
 
         assert "Пользователь" in str(exc_info.value)
         mock_users_repo.get_by_id.assert_called_once_with(user_id)
@@ -149,9 +153,11 @@ class TestUsersServiceUpdateUser:
         mock_users_repo.get_by_id.return_value = existing_user
         mock_users_repo.exists_by_email.return_value = True
 
-        with patch("src.utils.db_manager.DBManager.get_users_repository", return_value=mock_users_repo):
-            with pytest.raises(EntityAlreadyExistsError) as exc_info:
-                await users_service.update_user(user_id, user_data)
+        with (
+            patch("src.utils.db_manager.DBManager.get_users_repository", return_value=mock_users_repo),
+            pytest.raises(EntityAlreadyExistsError) as exc_info,
+        ):
+            await users_service.update_user(user_id, user_data)
 
         assert "Пользователь" in str(exc_info.value)
         assert "email" in str(exc_info.value)
@@ -229,9 +235,11 @@ class TestUsersServicePartialUpdateUser:
 
         mock_users_repo.get_by_id.return_value = None
 
-        with patch("src.utils.db_manager.DBManager.get_users_repository", return_value=mock_users_repo):
-            with pytest.raises(EntityNotFoundError) as exc_info:
-                await users_service.partial_update_user(user_id, update_data)
+        with (
+            patch("src.utils.db_manager.DBManager.get_users_repository", return_value=mock_users_repo),
+            pytest.raises(EntityNotFoundError) as exc_info,
+        ):
+            await users_service.partial_update_user(user_id, update_data)
 
         assert "Пользователь" in str(exc_info.value)
         mock_users_repo.get_by_id.assert_called_once_with(user_id)
@@ -251,9 +259,11 @@ class TestUsersServicePartialUpdateUser:
         mock_users_repo.get_by_id.return_value = existing_user
         mock_users_repo.exists_by_email.return_value = True
 
-        with patch("src.utils.db_manager.DBManager.get_users_repository", return_value=mock_users_repo):
-            with pytest.raises(EntityAlreadyExistsError) as exc_info:
-                await users_service.partial_update_user(user_id, update_data)
+        with (
+            patch("src.utils.db_manager.DBManager.get_users_repository", return_value=mock_users_repo),
+            pytest.raises(EntityAlreadyExistsError) as exc_info,
+        ):
+            await users_service.partial_update_user(user_id, update_data)
 
         assert "Пользователь" in str(exc_info.value)
         assert "email" in str(exc_info.value)

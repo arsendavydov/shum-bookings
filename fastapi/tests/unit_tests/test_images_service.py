@@ -47,7 +47,6 @@ class TestImagesServiceValidateHotelExists:
         hotel_id = 1
         from src.schemas.hotels import SchemaHotel
 
-        from src.schemas.hotels import SchemaHotel
 
         mock_hotels_repo.get_by_id.return_value = SchemaHotel(id=hotel_id, title="Отель", address="Адрес")
 
@@ -62,9 +61,11 @@ class TestImagesServiceValidateHotelExists:
         hotel_id = 999
         mock_hotels_repo.get_by_id.return_value = None
 
-        with patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo):
-            with pytest.raises(EntityNotFoundError) as exc_info:
-                await images_service.validate_hotel_exists(hotel_id)
+        with (
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
+            pytest.raises(EntityNotFoundError) as exc_info,
+        ):
+            await images_service.validate_hotel_exists(hotel_id)
 
         assert "Отель" in str(exc_info.value)
         mock_hotels_repo.get_by_id.assert_called_once_with(hotel_id)
@@ -86,7 +87,7 @@ class TestImagesServiceDeleteImage:
 
         with patch("src.utils.db_manager.DBManager.get_images_repository", return_value=mock_images_repo), patch(
             "src.services.images.IMAGES_DIR", Path("/tmp/test_images")
-        ), patch("src.services.images.os.remove") as mock_remove, patch(
+        ), patch("src.services.images.os.remove"), patch(
             "src.services.images.Path.glob", return_value=[]
         ):
             result = await images_service.delete_image(image_id)

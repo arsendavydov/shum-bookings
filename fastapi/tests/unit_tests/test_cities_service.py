@@ -73,11 +73,12 @@ class TestCitiesServiceCreateCity:
 
         mock_countries_repo._get_one_by_id_exact.return_value = None
 
-        with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo), patch(
-            "src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo),
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
+            pytest.raises(EntityNotFoundError) as exc_info,
         ):
-            with pytest.raises(EntityNotFoundError) as exc_info:
-                await cities_service.create_city(name, country_id)
+            await cities_service.create_city(name, country_id)
 
         assert "Страна" in str(exc_info.value)
         mock_countries_repo._get_one_by_id_exact.assert_called_once_with(country_id)
@@ -97,11 +98,12 @@ class TestCitiesServiceCreateCity:
         mock_countries_repo._get_one_by_id_exact.return_value = CountriesOrm(id=country_id, name="Россия", iso_code="RU")
         mock_cities_repo.get_by_name_and_country_id.return_value = existing_city
 
-        with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo), patch(
-            "src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo),
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
+            pytest.raises(EntityAlreadyExistsError) as exc_info,
         ):
-            with pytest.raises(EntityAlreadyExistsError) as exc_info:
-                await cities_service.create_city(name, country_id)
+            await cities_service.create_city(name, country_id)
 
         assert "Город" in str(exc_info.value)
         assert "название" in str(exc_info.value)
@@ -150,11 +152,12 @@ class TestCitiesServiceUpdateCity:
 
         mock_cities_repo._get_one_by_id_exact.return_value = None
 
-        with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo), patch(
-            "src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo),
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
+            pytest.raises(EntityNotFoundError) as exc_info,
         ):
-            with pytest.raises(EntityNotFoundError) as exc_info:
-                await cities_service.update_city(city_id, name, country_id)
+            await cities_service.update_city(city_id, name, country_id)
 
         assert "Город" in str(exc_info.value)
         mock_cities_repo._get_one_by_id_exact.assert_called_once_with(city_id)
@@ -173,11 +176,12 @@ class TestCitiesServiceUpdateCity:
         mock_cities_repo._get_one_by_id_exact.return_value = existing_city_orm
         mock_countries_repo._get_one_by_id_exact.return_value = None
 
-        with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo), patch(
-            "src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo),
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
+            pytest.raises(EntityNotFoundError) as exc_info,
         ):
-            with pytest.raises(EntityNotFoundError) as exc_info:
-                await cities_service.update_city(city_id, name, country_id)
+            await cities_service.update_city(city_id, name, country_id)
 
         assert "Страна" in str(exc_info.value)
         mock_cities_repo._get_one_by_id_exact.assert_called_once_with(city_id)
@@ -225,7 +229,7 @@ class TestCitiesServicePartialUpdateCity:
         existing_city = SchemaCity(id=city_id, name="Старое Название", country=SchemaCountry(id=1, name="Россия", iso_code="RU"))
         updated_city = SchemaCity(id=city_id, name=name, country=SchemaCountry(id=1, name="Россия", iso_code="RU"))
 
-        mock_cities_repo._to_schema = lambda x: existing_city
+        mock_cities_repo._to_schema = lambda _: existing_city
         mock_cities_repo.get_by_name_and_country_id.return_value = None
         mock_cities_repo.edit.return_value = updated_city
 
@@ -253,7 +257,7 @@ class TestCitiesServicePartialUpdateCity:
         existing_city_orm = CitiesOrm(id=city_id, name="Москва", country_id=1)
         existing_city = SchemaCity(id=city_id, name="Москва", country=SchemaCountry(id=1, name="Россия", iso_code="RU"))
 
-        mock_cities_repo._to_schema = lambda x: existing_city
+        mock_cities_repo._to_schema = lambda _: existing_city
 
         async def mock_execute(query):
             result_mock = MagicMock()
@@ -282,11 +286,12 @@ class TestCitiesServicePartialUpdateCity:
 
         cities_service.session.execute = mock_execute
 
-        with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo), patch(
-            "src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo),
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
+            pytest.raises(EntityNotFoundError) as exc_info,
         ):
-            with pytest.raises(EntityNotFoundError) as exc_info:
-                await cities_service.partial_update_city(city_id, name="Новое Название")
+            await cities_service.partial_update_city(city_id, name="Новое Название")
 
         assert "Город" in str(exc_info.value)
         mock_cities_repo.edit.assert_not_called()

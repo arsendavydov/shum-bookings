@@ -1,12 +1,9 @@
 import json
-import logging
-import os
 from pathlib import Path
 
 import pytest
 
 from src.utils.logger import LOGS_DIR, get_logger, setup_logging
-
 
 pytestmark = pytest.mark.unit
 

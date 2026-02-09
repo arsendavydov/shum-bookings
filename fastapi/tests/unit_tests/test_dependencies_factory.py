@@ -4,13 +4,11 @@ Unit тесты для generic фабрики репозиториев в depend
 Проверяют, что фабрика create_repository_dependency работает корректно.
 """
 
-from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.api.dependencies import create_repository_dependency
-from src.utils.db_manager import DBManager
 
 pytestmark = pytest.mark.unit
 

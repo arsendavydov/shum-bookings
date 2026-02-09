@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Any
 
 from celery import Celery
 from celery.signals import after_setup_logger, after_setup_task_logger
@@ -14,9 +15,9 @@ setup_logging(log_level=log_level)
 # Настраиваем JSON логирование для Celery через сигналы
 if _use_json_logs():
     json_formatter = JsonFormatter()
-    
+
     @after_setup_logger.connect
-    def setup_celery_logger(logger, *args, **kwargs):
+    def setup_celery_logger(logger: logging.Logger, *args: Any, **kwargs: Any) -> None:  # noqa: ARG001
         """Настроить JSON форматтер для Celery logger."""
         for handler in logger.handlers:
             handler.setFormatter(json_formatter)
@@ -24,9 +25,9 @@ if _use_json_logs():
         root_logger = logging.getLogger()
         for handler in root_logger.handlers:
             handler.setFormatter(json_formatter)
-    
+
     @after_setup_task_logger.connect
-    def setup_celery_task_logger(logger, *args, **kwargs):
+    def setup_celery_task_logger(logger: logging.Logger, *args: Any, **kwargs: Any) -> None:  # noqa: ARG001
         """Настроить JSON форматтер для Celery task logger."""
         for handler in logger.handlers:
             handler.setFormatter(json_formatter)

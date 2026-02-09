@@ -79,11 +79,12 @@ class TestRoomsServiceCreateRoom:
 
         mock_hotels_repo.get_by_id.return_value = None
 
-        with patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo), patch(
-            "src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
+            patch("src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo),
+            pytest.raises(EntityNotFoundError) as exc_info,
         ):
-            with pytest.raises(EntityNotFoundError) as exc_info:
-                await rooms_service.create_room(hotel_id, room_data)
+            await rooms_service.create_room(hotel_id, room_data)
 
         assert "Отель" in str(exc_info.value)
         mock_hotels_repo.get_by_id.assert_called_once_with(hotel_id)
@@ -125,8 +126,8 @@ class TestRoomsServiceCreateRoom:
         room_data = {"title": "Номер", "price": 1000, "quantity": 5}
         facility_ids = [1, 2]
 
-        from src.schemas.hotels import SchemaHotel
         from src.schemas.facilities import SchemaFacility
+        from src.schemas.hotels import SchemaHotel
 
         mock_hotels_repo.get_by_id.return_value = SchemaHotel(
             id=hotel_id, title="Отель", city_id=1, address="Адрес", check_in_time=None, check_out_time=None
@@ -137,11 +138,13 @@ class TestRoomsServiceCreateRoom:
         # Первое удобство существует, второе — нет
         mock_facilities_repo.get_by_id.side_effect = [SchemaFacility(id=1, title="WiFi"), None]
 
-        with patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo), patch(
-            "src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo
-        ), patch("src.utils.db_manager.DBManager.get_facilities_repository", return_value=mock_facilities_repo):
-            with pytest.raises(EntityNotFoundError) as exc_info:
-                await rooms_service.create_room(hotel_id, room_data, facility_ids=facility_ids)
+        with (
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
+            patch("src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo),
+            patch("src.utils.db_manager.DBManager.get_facilities_repository", return_value=mock_facilities_repo),
+            pytest.raises(EntityNotFoundError) as exc_info,
+        ):
+            await rooms_service.create_room(hotel_id, room_data, facility_ids=facility_ids)
 
         assert "Удобство" in str(exc_info.value)
 
@@ -200,11 +203,12 @@ class TestRoomsServiceUpdateRoom:
         )
         mock_rooms_repo.get_by_id.return_value = existing_room
 
-        with patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo), patch(
-            "src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
+            patch("src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo),
+            pytest.raises(ValidationError) as exc_info,
         ):
-            with pytest.raises(ValidationError) as exc_info:
-                await rooms_service.update_room(hotel_id, room_id, room_data)
+            await rooms_service.update_room(hotel_id, room_id, room_data)
 
         assert "Номер не принадлежит указанному отелю" in str(exc_info.value)
         mock_rooms_repo.edit.assert_not_called()
@@ -313,11 +317,12 @@ class TestRoomsServiceDeleteRoom:
         )
         mock_rooms_repo.get_by_id.return_value = existing_room
 
-        with patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo), patch(
-            "src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
+            patch("src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo),
+            pytest.raises(ValidationError) as exc_info,
         ):
-            with pytest.raises(ValidationError) as exc_info:
-                await rooms_service.delete_room(hotel_id, room_id)
+            await rooms_service.delete_room(hotel_id, room_id)
 
         assert "Номер не принадлежит указанному отелю" in str(exc_info.value)
         mock_rooms_repo.delete.assert_not_called()

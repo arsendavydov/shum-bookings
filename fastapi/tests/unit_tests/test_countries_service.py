@@ -65,9 +65,11 @@ class TestCountriesServiceCreateCountry:
         mock_repo = AsyncMock()
         mock_repo.get_by_name_case_insensitive.return_value = existing_country
 
-        with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_repo):
-            with pytest.raises(EntityAlreadyExistsError) as exc_info:
-                await countries_service.create_country(name, iso_code)
+        with (
+            patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_repo),
+            pytest.raises(EntityAlreadyExistsError) as exc_info,
+        ):
+            await countries_service.create_country(name, iso_code)
 
         assert "Страна" in str(exc_info.value)
         assert "название" in str(exc_info.value)
@@ -86,9 +88,11 @@ class TestCountriesServiceCreateCountry:
         mock_repo.get_by_name_case_insensitive.return_value = None
         mock_repo.get_by_iso_code.return_value = existing_country
 
-        with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_repo):
-            with pytest.raises(EntityAlreadyExistsError) as exc_info:
-                await countries_service.create_country(name, iso_code)
+        with (
+            patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_repo),
+            pytest.raises(EntityAlreadyExistsError) as exc_info,
+        ):
+            await countries_service.create_country(name, iso_code)
 
         assert "Страна" in str(exc_info.value)
         assert "ISO код" in str(exc_info.value)
@@ -150,9 +154,11 @@ class TestCountriesServiceUpdateCountry:
         mock_repo = AsyncMock()
         mock_repo._get_one_by_id_exact.return_value = None
 
-        with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_repo):
-            with pytest.raises(EntityNotFoundError) as exc_info:
-                await countries_service.update_country(country_id, name, iso_code)
+        with (
+            patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_repo),
+            pytest.raises(EntityNotFoundError) as exc_info,
+        ):
+            await countries_service.update_country(country_id, name, iso_code)
 
         assert "Страна" in str(exc_info.value)
         mock_repo._get_one_by_id_exact.assert_called_once_with(country_id)
@@ -234,7 +240,7 @@ class TestCountriesServicePartialUpdateCountry:
 
         mock_repo = AsyncMock()
         mock_repo._get_one_by_id_exact.return_value = existing_country_orm
-        mock_repo._to_schema = lambda x: existing_country
+        mock_repo._to_schema = lambda _: existing_country
 
         with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_repo):
             result = await countries_service.partial_update_country(country_id)
@@ -251,9 +257,11 @@ class TestCountriesServicePartialUpdateCountry:
         mock_repo = AsyncMock()
         mock_repo._get_one_by_id_exact.return_value = None
 
-        with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_repo):
-            with pytest.raises(EntityNotFoundError) as exc_info:
-                await countries_service.partial_update_country(country_id, name="Новое Название")
+        with (
+            patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_repo),
+            pytest.raises(EntityNotFoundError) as exc_info,
+        ):
+            await countries_service.partial_update_country(country_id, name="Новое Название")
 
         assert "Страна" in str(exc_info.value)
         mock_repo._get_one_by_id_exact.assert_called_once_with(country_id)

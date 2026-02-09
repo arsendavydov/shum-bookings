@@ -76,11 +76,12 @@ class TestHotelsServiceCreateHotel:
 
         mock_cities_repo.get_by_name_case_insensitive.return_value = None
 
-        with patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo), patch(
-            "src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
+            pytest.raises(EntityNotFoundError) as exc_info,
         ):
-            with pytest.raises(EntityNotFoundError) as exc_info:
-                await hotels_service.create_hotel(title, city_name, address)
+            await hotels_service.create_hotel(title, city_name, address)
 
         assert "Город" in str(exc_info.value)
         mock_cities_repo.get_by_name_case_insensitive.assert_called_once_with(city_name)
@@ -100,11 +101,12 @@ class TestHotelsServiceCreateHotel:
         mock_cities_repo.get_by_name_case_insensitive.return_value = city_orm
         mock_hotels_repo.exists_by_title.return_value = True
 
-        with patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo), patch(
-            "src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
+            pytest.raises(EntityAlreadyExistsError) as exc_info,
         ):
-            with pytest.raises(EntityAlreadyExistsError) as exc_info:
-                await hotels_service.create_hotel(title, city_name, address)
+            await hotels_service.create_hotel(title, city_name, address)
 
         assert "Отель" in str(exc_info.value)
         assert "название" in str(exc_info.value)
@@ -179,11 +181,12 @@ class TestHotelsServiceUpdateHotel:
 
         mock_hotels_repo.get_by_id.return_value = None
 
-        with patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo), patch(
-            "src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
+            pytest.raises(EntityNotFoundError) as exc_info,
         ):
-            with pytest.raises(EntityNotFoundError) as exc_info:
-                await hotels_service.update_hotel(hotel_id, title, city_name, address)
+            await hotels_service.update_hotel(hotel_id, title, city_name, address)
 
         assert "Отель" in str(exc_info.value)
         mock_hotels_repo.get_by_id.assert_called_once_with(hotel_id)
@@ -234,7 +237,7 @@ class TestHotelsServicePartialUpdateHotel:
     @pytest.mark.asyncio
     async def test_get_hotels_with_available_rooms_invalid_dates(self, hotels_service, mock_hotels_repo):
         """Проверить, что запрос отелей с некорректным периодом дат выбрасывает ошибку валидации."""
-        from datetime import date, timedelta
+        from datetime import date
 
         date_from = date.today()
         date_to = date_from  # некорректно: дата начала равна дате окончания

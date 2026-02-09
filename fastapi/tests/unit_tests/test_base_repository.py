@@ -4,7 +4,7 @@ Unit тесты для BaseRepository.
 Проверяют оптимизацию get_by_id() с поддержкой selectinload для relationships.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
