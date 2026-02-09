@@ -37,10 +37,10 @@ spec:
           subPath: nginx.conf
         resources:
           requests:
-            memory: "15Mi"
+            memory: "32Mi"
             cpu: "10m"
           limits:
-            memory: "30Mi"
+            memory: "64Mi"
             cpu: "20m"
         livenessProbe:
           httpGet:

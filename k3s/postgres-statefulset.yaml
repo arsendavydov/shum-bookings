@@ -49,10 +49,10 @@ spec:
           mountPath: /var/lib/postgresql/data
         resources:
           requests:
-            memory: "50Mi"
+            memory: "128Mi"
             cpu: "40m"
           limits:
-            memory: "80Mi"
+            memory: "256Mi"
             cpu: "60m"
         livenessProbe:
           exec:
