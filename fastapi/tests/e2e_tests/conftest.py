@@ -4,6 +4,7 @@
 BASE_URL можно настроить через переменную окружения E2E_BASE_URL.
 По умолчанию используется localhost для локального тестирования.
 """
+
 import os
 import time
 from pathlib import Path
@@ -63,8 +64,7 @@ def test_user_email():
 @pytest.fixture(scope="function", autouse=True)
 def print_e2e_info(e2e_base_url):
     """Выводит информацию о настройках E2E тестов"""
-    print(f"\n🔍 E2E тесты настроены:")
+    print("\n🔍 E2E тесты настроены:")
     print(f"   BASE_URL: {e2e_base_url}")
     print(f"   Задержка между запросами: {E2E_REQUEST_DELAY}s")
     yield
-
