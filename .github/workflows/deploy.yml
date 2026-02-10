@@ -123,6 +123,8 @@ jobs:
           sed -i "s|\${HEALTH_CHECK_PERIOD:-10}|$HEALTH_CHECK_PERIOD|g" k3s/redis-deployment.yaml
           sed -i "s|\${HEALTH_CHECK_TIMEOUT:-5}|$HEALTH_CHECK_TIMEOUT|g" k3s/redis-deployment.yaml
           sed -i "s|\${HEALTH_CHECK_FAILURE_THRESHOLD:-3}|$HEALTH_CHECK_FAILURE_THRESHOLD|g" k3s/redis-deployment.yaml
+          sed -i "s|\${HEALTH_CHECK_READINESS_INITIAL_DELAY:-10}|$HEALTH_CHECK_READINESS_INITIAL_DELAY|g" k3s/redis-deployment.yaml
+          sed -i "s|\${HEALTH_CHECK_READINESS_PERIOD:-5}|$HEALTH_CHECK_READINESS_PERIOD|g" k3s/redis-deployment.yaml
 
           echo "=== DEPLOY (GitHub): создание ConfigMap и Secret через общий скрипт ==="
           ci/gitlab/create-configmap-and-secret.sh
