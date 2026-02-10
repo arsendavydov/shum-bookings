@@ -136,7 +136,8 @@ deploy:production:
       export HEALTH_CHECK_READINESS_INITIAL_DELAY=${HEALTH_CHECK_READINESS_INITIAL_DELAY:-10}
       export HEALTH_CHECK_READINESS_PERIOD=${HEALTH_CHECK_READINESS_PERIOD:-5}
       echo "=== DEPLOY: Шаг 2/3 — обновление тегов образов в манифестах ==="
-      sed -i "s|${CI_REGISTRY_IMAGE}:latest|$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA|g" k3s/fastapi-deployment.yaml || true
+      # Заменяем плейсхолдеры ${CI_REGISTRY_IMAGE}:latest / ${CI_REGISTRY_IMAGE}/nginx:latest на конкретный тег коммита
+      sed -i "s|\${CI_REGISTRY_IMAGE}:latest|$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA|g" k3s/fastapi-deployment.yaml || true
       sed -i "s|\${CI_REGISTRY_IMAGE}/nginx:latest|$CI_REGISTRY_IMAGE/nginx:$CI_COMMIT_SHA|g" k3s/nginx-deployment.yaml
       # Подстановка переменных для FastAPI
       sed -i "s|\${FASTAPI_REPLICAS:-1}|$FASTAPI_REPLICAS|g" k3s/fastapi-deployment.yaml

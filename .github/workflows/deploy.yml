@@ -137,7 +137,8 @@ jobs:
           export HEALTH_CHECK_FAILURE_THRESHOLD=${HEALTH_CHECK_FAILURE_THRESHOLD:-3}
           export HEALTH_CHECK_READINESS_INITIAL_DELAY=${HEALTH_CHECK_READINESS_INITIAL_DELAY:-10}
           export HEALTH_CHECK_READINESS_PERIOD=${HEALTH_CHECK_READINESS_PERIOD:-5}
-          sed -i "s|${CI_REGISTRY_IMAGE}:latest|$CI_REGISTRY_IMAGE:${CI_COMMIT_SHA}|g" k3s/fastapi-deployment.yaml || true
+          # Заменяем плейсхолдеры ${CI_REGISTRY_IMAGE}:latest / ${CI_REGISTRY_IMAGE}/nginx:latest на конкретный тег коммита
+          sed -i "s|\${CI_REGISTRY_IMAGE}:latest|$CI_REGISTRY_IMAGE:${CI_COMMIT_SHA}|g" k3s/fastapi-deployment.yaml || true
           sed -i "s|\${CI_REGISTRY_IMAGE}/nginx:latest|$CI_REGISTRY_IMAGE/nginx:${CI_COMMIT_SHA}|g" k3s/nginx-deployment.yaml
 
           # Подстановка переменных для FastAPI
