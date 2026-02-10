@@ -58,7 +58,31 @@ jobs:
           
           echo "📥 Установка зависимостей..."
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt || {
+            echo "❌ Ошибка при установке зависимостей!"
+            exit 1
+          }
+          
+          echo "✅ Зависимости установлены успешно"
+          
+          echo ""
+          echo "🔍 Проверка установки ключевых зависимостей..."
+          python -c "import redis; print(f'✅ redis версия: {redis.__version__}')" || {
+            echo "❌ Модуль redis не установлен!"
+            exit 1
+          }
+          python -c "import pytest; print(f'✅ pytest версия: {pytest.__version__}')" || {
+            echo "❌ Модуль pytest не установлен!"
+            exit 1
+          }
+          python -c "import ruff; print('✅ ruff установлен')" || {
+            echo "❌ Модуль ruff не установлен!"
+            exit 1
+          }
+          python -c "import pyright; print('✅ pyright установлен')" || {
+            echo "❌ Модуль pyright не установлен!"
+            exit 1
+          }
           
           echo ""
           echo "=========================================="
