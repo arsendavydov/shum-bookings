@@ -57,7 +57,7 @@ class RoomsRepository(BaseRepository[RoomsOrm]):
         await self.session.flush()
         await self.session.refresh(instance)
 
-        # Загружаем facilities через selectinload
+        # Загружаем facilities через selectinload 
         query = self._load_room_with_facilities_query(room_id=instance.id)
         result = await self.session.execute(query)
         instance_with_facilities = result.scalar_one()
