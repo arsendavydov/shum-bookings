@@ -27,9 +27,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y openssh-client netcat-openbsd curl
           # Устанавливаем kubectl
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+          echo "📦 Установка kubectl версии: $KUBECTL_VERSION"
+          curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
           sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
           kubectl version --client
+          rm -f kubectl
 
       - name: Setup Python 3.11
         uses: actions/setup-python@v5
