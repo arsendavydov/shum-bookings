@@ -3,6 +3,7 @@ Unit тесты для CitiesService.
 
 Тестируют бизнес-логику сервиса с моками репозиториев.
 """
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -51,12 +52,15 @@ class TestCitiesServiceCreateCity:
 
         expected_city = SchemaCity(id=1, name=name, country=SchemaCountry(id=country_id, name="Россия", iso_code="RU"))
 
-        mock_countries_repo._get_one_by_id_exact.return_value = CountriesOrm(id=country_id, name="Россия", iso_code="RU")
+        mock_countries_repo._get_one_by_id_exact.return_value = CountriesOrm(
+            id=country_id, name="Россия", iso_code="RU"
+        )
         mock_cities_repo.get_by_name_and_country_id.return_value = None
         mock_cities_repo.create.return_value = expected_city
 
-        with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo), patch(
-            "src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo),
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
         ):
             result = await cities_service.create_city(name, country_id)
 
@@ -94,8 +98,9 @@ class TestCitiesServiceCreateCity:
 
         existing_city = SchemaCity(id=1, name=name, country=SchemaCountry(id=country_id, name="Россия", iso_code="RU"))
 
-
-        mock_countries_repo._get_one_by_id_exact.return_value = CountriesOrm(id=country_id, name="Россия", iso_code="RU")
+        mock_countries_repo._get_one_by_id_exact.return_value = CountriesOrm(
+            id=country_id, name="Россия", iso_code="RU"
+        )
         mock_cities_repo.get_by_name_and_country_id.return_value = existing_city
 
         with (
@@ -125,16 +130,21 @@ class TestCitiesServiceUpdateCity:
         from src.models.countries import CountriesOrm
 
         existing_city_orm = CitiesOrm(id=city_id, name="Старое Название", country_id=country_id)
-        updated_city = SchemaCity(id=city_id, name=name, country=SchemaCountry(id=country_id, name="Россия", iso_code="RU"))
+        updated_city = SchemaCity(
+            id=city_id, name=name, country=SchemaCountry(id=country_id, name="Россия", iso_code="RU")
+        )
 
         mock_cities_repo._get_one_by_id_exact.return_value = existing_city_orm
 
-        mock_countries_repo._get_one_by_id_exact.return_value = CountriesOrm(id=country_id, name="Россия", iso_code="RU")
+        mock_countries_repo._get_one_by_id_exact.return_value = CountriesOrm(
+            id=country_id, name="Россия", iso_code="RU"
+        )
         mock_cities_repo.get_by_name_and_country_id.return_value = None
         mock_cities_repo.edit.return_value = updated_city
 
-        with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo), patch(
-            "src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo),
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
         ):
             result = await cities_service.update_city(city_id, name, country_id)
 
@@ -198,15 +208,20 @@ class TestCitiesServiceUpdateCity:
         from src.models.countries import CountriesOrm
 
         existing_city_orm = CitiesOrm(id=city_id, name=name, country_id=country_id)
-        updated_city = SchemaCity(id=city_id, name=name, country=SchemaCountry(id=country_id, name="Россия", iso_code="RU"))
+        updated_city = SchemaCity(
+            id=city_id, name=name, country=SchemaCountry(id=country_id, name="Россия", iso_code="RU")
+        )
 
         mock_cities_repo._get_one_by_id_exact.return_value = existing_city_orm
 
-        mock_countries_repo._get_one_by_id_exact.return_value = CountriesOrm(id=country_id, name="Россия", iso_code="RU")
+        mock_countries_repo._get_one_by_id_exact.return_value = CountriesOrm(
+            id=country_id, name="Россия", iso_code="RU"
+        )
         mock_cities_repo.edit.return_value = updated_city
 
-        with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo), patch(
-            "src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo),
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
         ):
             result = await cities_service.update_city(city_id, name, country_id)
 
@@ -226,7 +241,9 @@ class TestCitiesServicePartialUpdateCity:
         from src.models.cities import CitiesOrm
 
         existing_city_orm = CitiesOrm(id=city_id, name="Старое Название", country_id=1)
-        existing_city = SchemaCity(id=city_id, name="Старое Название", country=SchemaCountry(id=1, name="Россия", iso_code="RU"))
+        existing_city = SchemaCity(
+            id=city_id, name="Старое Название", country=SchemaCountry(id=1, name="Россия", iso_code="RU")
+        )
         updated_city = SchemaCity(id=city_id, name=name, country=SchemaCountry(id=1, name="Россия", iso_code="RU"))
 
         mock_cities_repo._to_schema = lambda _: existing_city
@@ -240,8 +257,9 @@ class TestCitiesServicePartialUpdateCity:
 
         cities_service.session.execute = mock_execute
 
-        with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo), patch(
-            "src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo),
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
         ):
             result = await cities_service.partial_update_city(city_id, name=name)
 
@@ -266,8 +284,9 @@ class TestCitiesServicePartialUpdateCity:
 
         cities_service.session.execute = mock_execute
 
-        with patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo), patch(
-            "src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_countries_repository", return_value=mock_countries_repo),
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
         ):
             result = await cities_service.partial_update_city(city_id)
 
@@ -295,4 +314,3 @@ class TestCitiesServicePartialUpdateCity:
 
         assert "Город" in str(exc_info.value)
         mock_cities_repo.edit.assert_not_called()
-

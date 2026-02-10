@@ -32,6 +32,7 @@ if _use_json_logs():
         for handler in logger.handlers:
             handler.setFormatter(json_formatter)
 
+
 # Получаем настройки Redis из переменных окружения напрямую
 # Не импортируем settings, чтобы избежать ошибок валидации JWT настроек
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")

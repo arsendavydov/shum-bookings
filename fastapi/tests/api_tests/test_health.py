@@ -1,5 +1,3 @@
-
-
 class TestHealthCheck:
     """Тесты для расширенных health checks"""
 
@@ -102,4 +100,3 @@ class TestHealthCheck:
         assert "alive" in data
         assert "timestamp" in data
         assert data["alive"] is True
-

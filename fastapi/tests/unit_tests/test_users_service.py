@@ -3,6 +3,7 @@ Unit тесты для UsersService.
 
 Тестируют бизнес-логику сервиса с моками репозиториев.
 """
+
 from unittest.mock import AsyncMock, patch
 
 import pytest

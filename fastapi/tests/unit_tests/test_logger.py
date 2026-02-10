@@ -57,5 +57,3 @@ def test_json_logging_enabled(monkeypatch):
     assert data["message"] == "Json log message"
     assert data["request_id"] == "req-123"
     assert "timestamp" in data
-
-

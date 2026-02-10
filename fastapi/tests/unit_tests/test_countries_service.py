@@ -3,6 +3,7 @@ Unit тесты для CountriesService.
 
 Тестируют бизнес-логику сервиса с моками репозиториев.
 """
+
 from unittest.mock import AsyncMock, patch
 
 import pytest

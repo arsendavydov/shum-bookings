@@ -3,6 +3,7 @@ Unit тесты для HotelsService.
 
 Тестируют бизнес-логику сервиса с моками репозиториев.
 """
+
 from datetime import time
 from unittest.mock import AsyncMock, patch
 
@@ -57,8 +58,9 @@ class TestHotelsServiceCreateHotel:
         mock_hotels_repo.exists_by_title.return_value = False
         mock_hotels_repo.create.return_value = expected_hotel
 
-        with patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo), patch(
-            "src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
         ):
             result = await hotels_service.create_hotel(title, city_name, address)
 
@@ -129,8 +131,9 @@ class TestHotelsServiceCreateHotel:
         mock_hotels_repo.exists_by_title.return_value = False
         mock_hotels_repo.create.return_value = expected_hotel
 
-        with patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo), patch(
-            "src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
         ):
             result = await hotels_service.create_hotel(title, city_name, address)
 
@@ -161,8 +164,9 @@ class TestHotelsServiceUpdateHotel:
         mock_hotels_repo.exists_by_title.return_value = False
         mock_hotels_repo.edit.return_value = updated_hotel
 
-        with patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo), patch(
-            "src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
         ):
             result = await hotels_service.update_hotel(hotel_id, title, city_name, address)
 
@@ -208,8 +212,9 @@ class TestHotelsServicePartialUpdateHotel:
         mock_hotels_repo.exists_by_title.return_value = False
         mock_hotels_repo.edit.return_value = updated_hotel
 
-        with patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo), patch(
-            "src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
         ):
             result = await hotels_service.partial_update_hotel(hotel_id, title=title)
 
@@ -225,8 +230,9 @@ class TestHotelsServicePartialUpdateHotel:
 
         mock_hotels_repo.get_by_id.return_value = existing_hotel
 
-        with patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo), patch(
-            "src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_cities_repository", return_value=mock_cities_repo),
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
         ):
             result = await hotels_service.partial_update_hotel(hotel_id)
 
@@ -278,4 +284,3 @@ class TestHotelsServiceDeleteHotel:
 
         assert result is False
         mock_hotels_repo.delete.assert_called_once_with(hotel_id)
-

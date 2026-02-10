@@ -3,6 +3,7 @@ Unit тесты для AuthService.
 
 Тестируют логику аутентификации без зависимостей от БД и репозиториев.
 """
+
 import time
 from datetime import UTC, datetime, timedelta
 
@@ -233,4 +234,3 @@ class TestAuthServiceUserRegistration:
         assert prepared.last_name is None
         assert prepared.telegram_id is None
         assert prepared.pachca_id is None
-

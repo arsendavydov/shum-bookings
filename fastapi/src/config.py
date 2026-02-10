@@ -39,7 +39,9 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"  # Уровень логирования: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
     # Загрузка файлов / изображений
-    MAX_IMAGE_FILE_SIZE_MB: int  # Максимальный размер загружаемого изображения в МБ (обязательно должно быть задано в .env)
+    MAX_IMAGE_FILE_SIZE_MB: (
+        int  # Максимальный размер загружаемого изображения в МБ (обязательно должно быть задано в .env)
+    )
 
     # Rate Limiting настройки
     RATE_LIMIT_ENABLED: bool = True  # Включить rate limiting

@@ -3,6 +3,7 @@ Unit тесты для RoomsService.
 
 Тестируют бизнес-логику сервиса с моками репозиториев.
 """
+
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -52,7 +53,9 @@ class TestRoomsServiceCreateRoom:
         """Проверить успешное создание номера."""
         hotel_id = 1
         room_data = {"title": "Номер", "price": 1000, "quantity": 5}
-        expected_room = SchemaRoom(id=1, hotel_id=hotel_id, title="Номер", price=1000, quantity=5, description=None, facilities=[])
+        expected_room = SchemaRoom(
+            id=1, hotel_id=hotel_id, title="Номер", price=1000, quantity=5, description=None, facilities=[]
+        )
 
         from src.schemas.hotels import SchemaHotel
 
@@ -61,9 +64,11 @@ class TestRoomsServiceCreateRoom:
         )
         mock_rooms_repo.create.return_value = expected_room
 
-        with patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo), patch(
-            "src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo
-        ), patch("src.utils.db_manager.DBManager.get_facilities_repository", return_value=mock_facilities_repo):
+        with (
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
+            patch("src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo),
+            patch("src.utils.db_manager.DBManager.get_facilities_repository", return_value=mock_facilities_repo),
+        ):
             result = await rooms_service.create_room(hotel_id, room_data)
 
         assert result == expected_room
@@ -91,12 +96,16 @@ class TestRoomsServiceCreateRoom:
         mock_rooms_repo.create.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_create_room_with_facilities(self, rooms_service, mock_rooms_repo, mock_hotels_repo, mock_facilities_repo):
+    async def test_create_room_with_facilities(
+        self, rooms_service, mock_rooms_repo, mock_hotels_repo, mock_facilities_repo
+    ):
         """Проверить создание номера с удобствами."""
         hotel_id = 1
         room_data = {"title": "Номер", "price": 1000}
         facility_ids = [1, 2]
-        expected_room = SchemaRoom(id=1, hotel_id=hotel_id, title="Номер", price=1000, quantity=5, description=None, facilities=[])
+        expected_room = SchemaRoom(
+            id=1, hotel_id=hotel_id, title="Номер", price=1000, quantity=5, description=None, facilities=[]
+        )
 
         from src.schemas.hotels import SchemaHotel
 
@@ -108,9 +117,11 @@ class TestRoomsServiceCreateRoom:
 
         mock_facilities_repo.get_by_id.return_value = SchemaFacility(id=1, title="WiFi")
 
-        with patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo), patch(
-            "src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo
-        ), patch("src.utils.db_manager.DBManager.get_facilities_repository", return_value=mock_facilities_repo):
+        with (
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
+            patch("src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo),
+            patch("src.utils.db_manager.DBManager.get_facilities_repository", return_value=mock_facilities_repo),
+        ):
             result = await rooms_service.create_room(hotel_id, room_data, facility_ids=facility_ids)
 
         assert result == expected_room
@@ -158,8 +169,18 @@ class TestRoomsServiceUpdateRoom:
         hotel_id = 1
         room_id = 1
         room_data = {"title": "Обновленный Номер", "price": 1500}
-        existing_room = SchemaRoom(id=room_id, hotel_id=hotel_id, title="Старый Номер", price=1000, quantity=5, description=None, facilities=[])
-        updated_room = SchemaRoom(id=room_id, hotel_id=hotel_id, title="Обновленный Номер", price=1500, quantity=5, description=None, facilities=[])
+        existing_room = SchemaRoom(
+            id=room_id, hotel_id=hotel_id, title="Старый Номер", price=1000, quantity=5, description=None, facilities=[]
+        )
+        updated_room = SchemaRoom(
+            id=room_id,
+            hotel_id=hotel_id,
+            title="Обновленный Номер",
+            price=1500,
+            quantity=5,
+            description=None,
+            facilities=[],
+        )
 
         from src.schemas.hotels import SchemaHotel
 
@@ -169,8 +190,9 @@ class TestRoomsServiceUpdateRoom:
         mock_rooms_repo.get_by_id.return_value = existing_room
         mock_rooms_repo.edit.return_value = updated_room
 
-        with patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo), patch(
-            "src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
+            patch("src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo),
         ):
             result = await rooms_service.update_room(hotel_id, room_id, room_data)
 
@@ -223,8 +245,12 @@ class TestRoomsServicePartialUpdateRoom:
         hotel_id = 1
         room_id = 1
         room_data = {"price": 1500}
-        existing_room = SchemaRoom(id=room_id, hotel_id=hotel_id, title="Номер", price=1000, quantity=5, description=None, facilities=[])
-        updated_room = SchemaRoom(id=room_id, hotel_id=hotel_id, title="Номер", price=1500, quantity=5, description=None, facilities=[])
+        existing_room = SchemaRoom(
+            id=room_id, hotel_id=hotel_id, title="Номер", price=1000, quantity=5, description=None, facilities=[]
+        )
+        updated_room = SchemaRoom(
+            id=room_id, hotel_id=hotel_id, title="Номер", price=1500, quantity=5, description=None, facilities=[]
+        )
 
         from src.schemas.hotels import SchemaHotel
 
@@ -234,8 +260,9 @@ class TestRoomsServicePartialUpdateRoom:
         mock_rooms_repo.get_by_id.return_value = existing_room
         mock_rooms_repo.edit.return_value = updated_room
 
-        with patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo), patch(
-            "src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
+            patch("src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo),
         ):
             result = await rooms_service.partial_update_room(hotel_id, room_id, room_data)
 
@@ -253,7 +280,9 @@ class TestRoomsServiceDeleteRoom:
         """Проверить успешное удаление номера."""
         hotel_id = 1
         room_id = 1
-        existing_room = SchemaRoom(id=room_id, hotel_id=hotel_id, title="Номер", price=1000, quantity=5, description=None, facilities=[])
+        existing_room = SchemaRoom(
+            id=room_id, hotel_id=hotel_id, title="Номер", price=1000, quantity=5, description=None, facilities=[]
+        )
 
         from src.schemas.hotels import SchemaHotel
 
@@ -263,8 +292,9 @@ class TestRoomsServiceDeleteRoom:
         mock_rooms_repo.get_by_id.return_value = existing_room
         mock_rooms_repo.delete.return_value = True
 
-        with patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo), patch(
-            "src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
+            patch("src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo),
         ):
             result = await rooms_service.delete_room(hotel_id, room_id)
 
@@ -286,8 +316,9 @@ class TestRoomsServiceDeleteRoom:
         )
         mock_rooms_repo.get_by_id.return_value = None
 
-        with patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo), patch(
-            "src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo
+        with (
+            patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo),
+            patch("src.utils.db_manager.DBManager.get_rooms_repository", return_value=mock_rooms_repo),
         ):
             result = await rooms_service.delete_room(hotel_id, room_id)
 
@@ -326,4 +357,3 @@ class TestRoomsServiceDeleteRoom:
 
         assert "Номер не принадлежит указанному отелю" in str(exc_info.value)
         mock_rooms_repo.delete.assert_not_called()
-

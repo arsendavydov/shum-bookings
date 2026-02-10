@@ -48,5 +48,3 @@ class ApiUser(HttpUser):
     @task(1)
     def metrics(self) -> None:
         self.client.get("/metrics")
-
-

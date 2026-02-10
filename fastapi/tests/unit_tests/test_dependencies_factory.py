@@ -84,10 +84,7 @@ class TestCreateRepositoryDependency:
 
     def test_factory_returns_two_functions(self, mock_get_repo_method):
         """Проверить, что фабрика возвращает две функции."""
-        get_repo, get_repo_with_commit = create_repository_dependency(
-            mock_get_repo_method, MockRepository
-        )
+        get_repo, get_repo_with_commit = create_repository_dependency(mock_get_repo_method, MockRepository)
 
         assert callable(get_repo)
         assert callable(get_repo_with_commit)
-

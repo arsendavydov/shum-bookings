@@ -28,4 +28,3 @@ class ImagesOrm(Base):
 
     # Many-to-many связь с hotels через промежуточную таблицу
     hotels: Mapped[list["HotelsOrm"]] = relationship("HotelsOrm", secondary=hotels_images, back_populates="images")
-

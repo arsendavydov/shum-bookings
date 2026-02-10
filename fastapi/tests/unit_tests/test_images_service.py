@@ -3,6 +3,7 @@ Unit тесты для ImagesService.
 
 Тестируют бизнес-логику сервиса с моками репозиториев.
 """
+
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -47,7 +48,6 @@ class TestImagesServiceValidateHotelExists:
         hotel_id = 1
         from src.schemas.hotels import SchemaHotel
 
-
         mock_hotels_repo.get_by_id.return_value = SchemaHotel(id=hotel_id, title="Отель", address="Адрес")
 
         with patch("src.utils.db_manager.DBManager.get_hotels_repository", return_value=mock_hotels_repo):
@@ -85,10 +85,11 @@ class TestImagesServiceDeleteImage:
         mock_images_repo.get_by_id.return_value = image
         mock_images_repo.delete.return_value = True
 
-        with patch("src.utils.db_manager.DBManager.get_images_repository", return_value=mock_images_repo), patch(
-            "src.services.images.IMAGES_DIR", Path("/tmp/test_images")
-        ), patch("src.services.images.os.remove"), patch(
-            "src.services.images.Path.glob", return_value=[]
+        with (
+            patch("src.utils.db_manager.DBManager.get_images_repository", return_value=mock_images_repo),
+            patch("src.services.images.IMAGES_DIR", Path("/tmp/test_images")),
+            patch("src.services.images.os.remove"),
+            patch("src.services.images.Path.glob", return_value=[]),
         ):
             result = await images_service.delete_image(image_id)
 
@@ -125,13 +126,13 @@ class TestImagesServiceDeleteImage:
         mock_file2 = MagicMock()
         mock_file2.exists.return_value = True
 
-        with patch("src.utils.db_manager.DBManager.get_images_repository", return_value=mock_images_repo), patch(
-            "src.services.images.IMAGES_DIR", Path("/tmp/test_images")
-        ), patch("src.services.images.os.remove") as mock_remove, patch(
-            "src.services.images.Path.glob", return_value=[mock_file1, mock_file2]
+        with (
+            patch("src.utils.db_manager.DBManager.get_images_repository", return_value=mock_images_repo),
+            patch("src.services.images.IMAGES_DIR", Path("/tmp/test_images")),
+            patch("src.services.images.os.remove") as mock_remove,
+            patch("src.services.images.Path.glob", return_value=[mock_file1, mock_file2]),
         ):
             result = await images_service.delete_image(image_id)
 
         assert result is True
         assert mock_remove.call_count >= 2
-

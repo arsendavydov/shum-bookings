@@ -34,7 +34,7 @@ jobs:
       - name: Run unit tests
         run: |
           echo "=========================================="
-          echo "=== TESTS: Запуск unit тестов ==="
+          echo "=== TESTS: Линтеры + unit тесты ==="
           echo "=========================================="
           echo ""
           cd fastapi
@@ -51,6 +51,20 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-asyncio pytest-mock httpx
+          
+          echo ""
+          echo "🔍 Запуск ruff (linting)..."
+          ruff check src/ tests/ || {
+            echo "❌ Ruff обнаружил ошибки!"
+            exit 1
+          }
+          
+          echo ""
+          echo "🔍 Запуск pyright (type checking)..."
+          pyright src/ || {
+            echo "❌ Pyright обнаружил ошибки типов!"
+            exit 1
+          }
           
           echo ""
           echo "🧪 Запуск unit тестов..."

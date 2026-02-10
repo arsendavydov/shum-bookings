@@ -3,6 +3,7 @@ Unit тесты для BookingsService.
 
 Тестируют бизнес-логику сервиса с моками репозиториев.
 """
+
 from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -71,7 +72,9 @@ class TestBookingsServiceCreateBooking:
             result = await bookings_service.create_booking(room_id, user_id, date_from, date_to)
 
         assert result == expected_booking
-        mock_bookings_repo.is_room_available.assert_called_once_with(room_id=room_id, date_from=date_from, date_to=date_to)
+        mock_bookings_repo.is_room_available.assert_called_once_with(
+            room_id=room_id, date_from=date_from, date_to=date_to
+        )
         mock_bookings_repo.create.assert_called_once()
 
     @pytest.mark.asyncio
@@ -178,7 +181,9 @@ class TestBookingsServiceCreateBooking:
             await bookings_service.create_booking(room_id, user_id, date_from, date_to)
 
         assert "Все номера данного типа уже забронированы" in str(exc_info.value)
-        mock_bookings_repo.is_room_available.assert_called_once_with(room_id=room_id, date_from=date_from, date_to=date_to)
+        mock_bookings_repo.is_room_available.assert_called_once_with(
+            room_id=room_id, date_from=date_from, date_to=date_to
+        )
         mock_bookings_repo.create.assert_not_called()
 
 
@@ -315,4 +320,3 @@ class TestBookingsServiceGetBookings:
 
         assert result == expected_bookings
         mock_bookings_repo.get_paginated.assert_called_once_with(page=page, per_page=per_page)
-
