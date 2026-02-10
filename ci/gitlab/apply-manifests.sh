@@ -55,6 +55,8 @@ sleep 3
 apply_with_retry k3s/redis-deployment.yaml
 
 echo "🔄 Применение deployment'ов с обновленными ресурсами..."
+kubectl delete deployment fastapi-app celery-worker nginx -n "$KUBE_NAMESPACE" --ignore-not-found=true || true
+sleep 3
 apply_with_retry k3s/fastapi-deployment.yaml
 apply_with_retry k3s/fastapi-service.yaml
 apply_with_retry k3s/celery-deployment.yaml
