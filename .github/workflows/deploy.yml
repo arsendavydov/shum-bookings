@@ -113,6 +113,23 @@ jobs:
           echo "=== TESTS: Запуск unit тестов ==="
           echo "=========================================="
           echo ""
+          echo "🧪 Настройка переменных окружения для unit-тестов..."
+          # Устанавливаем минимальные значения для Settings, чтобы unit-тесты могли запуститься
+          # Эти значения не используются в unit-тестах, но нужны для инициализации Settings
+          export DB_HOST="localhost"
+          export DB_PORT="5432"
+          export DB_NAME="test"
+          export DB_USERNAME="test"
+          export DB_PASSWORD="test"
+          export JWT_SECRET_KEY="test-secret-key-for-unit-tests-only"
+          export JWT_ALGORITHM="HS256"
+          export JWT_ACCESS_TOKEN_EXPIRE_MINUTES="30"
+          export JWT_COOKIE_SECURE="false"
+          export REDIS_HOST="localhost"
+          export REDIS_PORT="6379"
+          export REDIS_DB="0"
+          export MAX_IMAGE_FILE_SIZE_MB="10"
+          
           echo "🧪 Запуск unit тестов..."
           pytest tests/unit_tests/ -v --tb=short --color=yes || {
             echo "❌ Unit тесты не прошли!"
