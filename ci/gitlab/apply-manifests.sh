@@ -41,6 +41,10 @@ fi
 kubectl get pvc -n "$KUBE_NAMESPACE" || true
 
 # База данных и кэш
+echo "🔄 Обновление Postgres StatefulSet..."
+# Удаляем существующий StatefulSet, чтобы избежать проблем с типами при patch'е
+kubectl delete statefulset postgres -n "$KUBE_NAMESPACE" --ignore-not-found=true || true
+sleep 3
 apply_with_retry k3s/postgres-statefulset.yaml
 apply_with_retry k3s/redis-deployment.yaml
 
