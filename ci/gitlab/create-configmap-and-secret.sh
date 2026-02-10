@@ -159,4 +159,56 @@ kubectl create secret generic booking-secrets \
 
 echo "✅ Secret booking-secrets создан/обновлен"
 
+echo "🔐 Создание/обновление imagePullSecret для Container Registry..."
+
+# Определяем тип registry и имя секрета
+if [[ -n "${CI_REGISTRY:-}" ]]; then
+  if [[ "$CI_REGISTRY" == *"ghcr.io"* ]] || [[ "${CI_REGISTRY_IMAGE:-}" == *"ghcr.io"* ]]; then
+    REGISTRY_SERVER="ghcr.io"
+    SECRET_NAME="ghcr-registry-secret"
+  elif [[ "$CI_REGISTRY" == *"registry.gitlab.com"* ]] || [[ "${CI_REGISTRY_IMAGE:-}" == *"registry.gitlab.com"* ]]; then
+    REGISTRY_SERVER="registry.gitlab.com"
+    SECRET_NAME="gitlab-registry-secret"
+  else
+    REGISTRY_SERVER="${CI_REGISTRY}"
+    SECRET_NAME="registry-secret"
+  fi
+else
+  # Пытаемся определить по CI_REGISTRY_IMAGE
+  if [[ "${CI_REGISTRY_IMAGE:-}" == *"ghcr.io"* ]]; then
+    REGISTRY_SERVER="ghcr.io"
+    SECRET_NAME="ghcr-registry-secret"
+  elif [[ "${CI_REGISTRY_IMAGE:-}" == *"registry.gitlab.com"* ]]; then
+    REGISTRY_SERVER="registry.gitlab.com"
+    SECRET_NAME="gitlab-registry-secret"
+  else
+    echo "⚠️  Не удалось определить тип registry из CI_REGISTRY или CI_REGISTRY_IMAGE"
+    echo "   Пропускаем создание imagePullSecret"
+    exit 0
+  fi
+fi
+
+if [[ -z "${CI_REGISTRY_USER:-}" ]] || [[ -z "${CI_REGISTRY_PASSWORD:-}" ]]; then
+  echo "⚠️  CI_REGISTRY_USER или CI_REGISTRY_PASSWORD не заданы"
+  echo "   Пропускаем создание imagePullSecret (используем существующий, если есть)"
+  exit 0
+fi
+
+echo "📦 Создание imagePullSecret для $REGISTRY_SERVER..."
+
+kubectl delete secret "$SECRET_NAME" -n "$KUBE_NAMESPACE" --ignore-not-found=true --request-timeout=30s || true
+
+kubectl create secret docker-registry "$SECRET_NAME" \
+  --docker-server="$REGISTRY_SERVER" \
+  --docker-username="$CI_REGISTRY_USER" \
+  --docker-password="$CI_REGISTRY_PASSWORD" \
+  --docker-email="${CI_REGISTRY_EMAIL:-arsen.davydov@gmail.com}" \
+  --namespace="$KUBE_NAMESPACE" \
+  --request-timeout=30s || {
+    echo "⚠️  Не удалось создать imagePullSecret $SECRET_NAME"
+    exit 1
+  }
+
+echo "✅ imagePullSecret $SECRET_NAME создан/обновлен для $REGISTRY_SERVER"
+
 

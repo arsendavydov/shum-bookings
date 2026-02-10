@@ -98,10 +98,27 @@ jobs:
 
       - name: Deploy manifests (reuse GitLab scripts)
         env:
-          CI_REGISTRY_IMAGE: ${{ secrets.CI_REGISTRY_IMAGE || 'registry.gitlab.com/shum-bookin/shum-booking' }}
+          CI_REGISTRY_IMAGE: ${{ secrets.CI_REGISTRY_IMAGE }}
           CI_COMMIT_SHA: ${{ github.sha }}
+          CI_REGISTRY: ${{ secrets.CI_REGISTRY }}
+          CI_REGISTRY_USER: ${{ secrets.CI_REGISTRY_USER }}
+          CI_REGISTRY_PASSWORD: ${{ secrets.CI_REGISTRY_PASSWORD }}
+          IMAGE_PULL_SECRET_NAME: ${{ secrets.IMAGE_PULL_SECRET_NAME }}
         run: |
           echo "=== DEPLOY (GitHub): экспорт переменных и обновление тегов образов ==="
+          : "${CI_REGISTRY:?CI_REGISTRY is required}"
+          : "${CI_REGISTRY_USER:?CI_REGISTRY_USER is required}"
+          : "${CI_REGISTRY_PASSWORD:?CI_REGISTRY_PASSWORD is required}"
+          : "${CI_REGISTRY_IMAGE:?CI_REGISTRY_IMAGE is required}"
+          : "${CI_COMMIT_SHA:?CI_COMMIT_SHA is required}"
+          : "${IMAGE_PULL_SECRET_NAME:?IMAGE_PULL_SECRET_NAME is required}"
+
+          export CI_REGISTRY
+          export CI_REGISTRY_USER
+          export CI_REGISTRY_PASSWORD
+          export CI_REGISTRY_IMAGE
+          export CI_COMMIT_SHA
+          export IMAGE_PULL_SECRET_NAME
           export FASTAPI_REPLICAS=${FASTAPI_REPLICAS:-1}
           export CELERY_REPLICAS=${CELERY_REPLICAS:-1}
           export NGINX_REPLICAS=${NGINX_REPLICAS:-1}
@@ -137,9 +154,13 @@ jobs:
           export HEALTH_CHECK_FAILURE_THRESHOLD=${HEALTH_CHECK_FAILURE_THRESHOLD:-3}
           export HEALTH_CHECK_READINESS_INITIAL_DELAY=${HEALTH_CHECK_READINESS_INITIAL_DELAY:-10}
           export HEALTH_CHECK_READINESS_PERIOD=${HEALTH_CHECK_READINESS_PERIOD:-5}
-          # Заменяем плейсхолдеры ${CI_REGISTRY_IMAGE}:latest / ${CI_REGISTRY_IMAGE}/nginx:latest на конкретный тег коммита
+          # Заменяем плейсхолдеры ${CI_REGISTRY_IMAGE}:latest / ${CI_REGISTRY_IMAGE}/nginx:latest и IMAGE_PULL_SECRET_NAME на конкретные значения
           sed -i "s|\${CI_REGISTRY_IMAGE}:latest|$CI_REGISTRY_IMAGE:${CI_COMMIT_SHA}|g" k3s/fastapi-deployment.yaml || true
+          sed -i "s|\${CI_REGISTRY_IMAGE}:latest|$CI_REGISTRY_IMAGE:${CI_COMMIT_SHA}|g" k3s/celery-deployment.yaml || true
           sed -i "s|\${CI_REGISTRY_IMAGE}/nginx:latest|$CI_REGISTRY_IMAGE/nginx:${CI_COMMIT_SHA}|g" k3s/nginx-deployment.yaml
+          sed -i "s|\${IMAGE_PULL_SECRET_NAME:-ghcr-registry-secret}|$IMAGE_PULL_SECRET_NAME|g" k3s/fastapi-deployment.yaml
+          sed -i "s|\${IMAGE_PULL_SECRET_NAME:-ghcr-registry-secret}|$IMAGE_PULL_SECRET_NAME|g" k3s/celery-deployment.yaml
+          sed -i "s|\${IMAGE_PULL_SECRET_NAME:-ghcr-registry-secret}|$IMAGE_PULL_SECRET_NAME|g" k3s/nginx-deployment.yaml
 
           # Подстановка переменных для FastAPI
           sed -i "s|\${FASTAPI_REPLICAS:-1}|$FASTAPI_REPLICAS|g" k3s/fastapi-deployment.yaml

@@ -19,7 +19,7 @@ spec:
         component: worker
     spec:
       imagePullSecrets:
-      - name: gitlab-registry-secret
+      - name: ${IMAGE_PULL_SECRET_NAME}
       containers:
       - name: celery
         image: ${CI_REGISTRY_IMAGE}:latest  # Обновляется автоматически в CI/CD (GitLab или GitHub registry)
