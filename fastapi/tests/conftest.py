@@ -22,13 +22,12 @@ TEST_PASSWORD = os.getenv("TEST_PASSWORD")
 TEST_EXAMPLE_EMAIL_DOMAIN = os.getenv("TEST_EXAMPLE_EMAIL_DOMAIN", "shum-booking.com")
 
 # Проверяем, запускаются ли unit-тесты (они не требуют TEST_PASSWORD)
-# Если в аргументах pytest есть "unit_tests" или маркер "-m unit", то не требуем TEST_PASSWORD
-is_unit_tests = any("unit_tests" in arg for arg in sys.argv) or any(
-    arg == "-m" and i + 1 < len(sys.argv) and "unit" in sys.argv[i + 1]
-    for i, arg in enumerate(sys.argv)
-)
+# Простая проверка: если в аргументах pytest есть путь, содержащий "unit_tests", то это unit-тесты
+argv_str = " ".join(str(arg) for arg in sys.argv)
+is_unit_tests = "unit_tests" in argv_str
 
 # TEST_PASSWORD обязателен только для API тестов и других тестов, которые его используют
+# Если TEST_PASSWORD не установлен и мы НЕ запускаем unit-тесты, выдаем ошибку
 if not TEST_PASSWORD and not is_unit_tests:
     raise ValueError(
         "Переменная окружения TEST_PASSWORD должна быть установлена в .test.env файле. "
