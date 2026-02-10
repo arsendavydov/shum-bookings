@@ -1,5 +1,6 @@
 import asyncio
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -16,12 +17,23 @@ env_test_path = Path(__file__).resolve().parent.parent.parent / ".test.env"
 if env_test_path.exists():
     load_dotenv(env_test_path, override=True)
 
-# Тестовые данные из переменных окружения (обязательны для тестов)
+# Тестовые данные из переменных окружения
 TEST_PASSWORD = os.getenv("TEST_PASSWORD")
 TEST_EXAMPLE_EMAIL_DOMAIN = os.getenv("TEST_EXAMPLE_EMAIL_DOMAIN", "shum-booking.com")
 
-if not TEST_PASSWORD:
-    raise ValueError("Переменная окружения TEST_PASSWORD должна быть установлена в .test.env файле. ")
+# Проверяем, запускаются ли unit-тесты (они не требуют TEST_PASSWORD)
+# Если в аргументах pytest есть "unit_tests" или маркер "-m unit", то не требуем TEST_PASSWORD
+is_unit_tests = any("unit_tests" in arg for arg in sys.argv) or any(
+    arg == "-m" and i + 1 < len(sys.argv) and "unit" in sys.argv[i + 1]
+    for i, arg in enumerate(sys.argv)
+)
+
+# TEST_PASSWORD обязателен только для API тестов и других тестов, которые его используют
+if not TEST_PASSWORD and not is_unit_tests:
+    raise ValueError(
+        "Переменная окружения TEST_PASSWORD должна быть установлена в .test.env файле. "
+        "Она требуется для API тестов, но не для unit-тестов."
+    )
 
 
 async def _recreate_test_database_async():
