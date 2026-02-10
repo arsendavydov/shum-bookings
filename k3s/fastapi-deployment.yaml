@@ -22,7 +22,7 @@ spec:
       - name: gitlab-registry-secret
       containers:
       - name: fastapi
-        image: registry.gitlab.com/shum-bookin/shum-booking:latest  # Обновляется автоматически в CI/CD
+        image: ${CI_REGISTRY_IMAGE}:latest  # Обновляется автоматически в CI/CD (GitLab или GitHub registry)
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
