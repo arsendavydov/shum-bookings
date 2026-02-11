@@ -121,12 +121,37 @@ class AuthService:
         Returns:
             Словарь с данными из токена или None, если токен невалиден/истек
         """
+        if not token or not isinstance(token, str):
+            return None
+
+        # Проверяем базовую структуру JWT токена (должен состоять из 3 частей, разделенных точками)
+        parts = token.split(".")
+        if len(parts) != 3:
+            return None
+
         try:
-            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+            # Явно указываем, что нужно проверять подпись
+            # PyJWT должен выбрасывать InvalidTokenError при неверной подписи
+            # Используем verify=True по умолчанию (это включено по умолчанию, но явно указываем)
+            payload = jwt.decode(
+                token,
+                self.secret_key,
+                algorithms=[self.algorithm],
+                options={
+                    "verify_signature": True,
+                    "verify_exp": True,
+                    "verify_iat": True,
+                },
+            )
             return payload
         except jwt.ExpiredSignatureError:
             return None
         except jwt.InvalidTokenError:
+            # Включает InvalidSignatureError, DecodeError и другие ошибки валидации
+            # InvalidSignatureError является подклассом InvalidTokenError в PyJWT
+            return None
+        except Exception:
+            # Ловим любые другие исключения (например, при поврежденном токене)
             return None
 
     def generate_refresh_token(self) -> str:
