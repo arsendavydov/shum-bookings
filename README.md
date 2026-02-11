@@ -1,4 +1,4 @@
-# Shum Booking — сервис бронирования отелей на FastAPI
+# Shum Booking — бэкенд сервиса бронирования отелей на FastAPI
 
 Развернут в K3s‑кластере, использует PostgreSQL, Redis, Celery, Nginx. Полноценный CI/CD через GitHub Actions или GitLab.
 

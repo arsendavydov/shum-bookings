@@ -48,6 +48,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
+    title="Shum Booking",
+    description="API сервиса бронирования отелей",
+    version="1.0.1",
     lifespan=lifespan,
     root_path=settings.ROOT_PATH if settings.ROOT_PATH else None,  # Для работы за прокси с префиксом пути
     openapi_tags=[
