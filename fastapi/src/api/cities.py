@@ -3,6 +3,11 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.decorator import cache
 
 from src.api.dependencies import CitiesServiceDep, DBDep, PaginationDep
+from src.examples.cities_examples import (
+    CREATE_CITY_BODY_EXAMPLES,
+    PATCH_CITY_BODY_EXAMPLES,
+    UPDATE_CITY_BODY_EXAMPLES,
+)
 from src.schemas import MessageResponse
 from src.schemas.cities import City, CityPATCH, SchemaCity
 from src.utils.api_helpers import get_or_404
@@ -24,7 +29,8 @@ async def get_cities(
     pagination: PaginationDep,
     db: DBDep,
     name: str | None = Query(
-        default=None, description="Фильтр по названию города (частичное совпадение, без учета регистра)"
+        default=None,
+        description="Фильтр по названию города (частичное совпадение, без учета регистра)",
     ),
     country_id: int | None = Query(default=None, description="Фильтр по ID страны (точное совпадение)"),
 ) -> list[SchemaCity]:
@@ -81,9 +87,7 @@ async def get_city_by_id(city_id: int = Path(..., description="ID города")
 )
 async def create_city(
     cities_service: CitiesServiceDep,
-    city: City = Body(
-        ..., openapi_examples={"1": {"summary": "Создать город", "value": {"name": "Москва", "country_id": 1}}}
-    ),
+    city: City = Body(..., openapi_examples=CREATE_CITY_BODY_EXAMPLES),
 ) -> MessageResponse:
     """
     Создать новый город.
@@ -120,13 +124,7 @@ async def update_city(
     city_id: int = Path(..., description="ID города"),
     city: City = Body(
         ...,
-        openapi_examples={
-            "1": {
-                "summary": "Обновить город",
-                "description": "Полное обновление информации о городе",
-                "value": {"name": "Москва", "country_id": 58},
-            }
-        },
+        openapi_examples=UPDATE_CITY_BODY_EXAMPLES,
     ),
 ) -> MessageResponse:
     """
@@ -164,11 +162,7 @@ async def partial_update_city(
     city_id: int = Path(..., description="ID города"),
     city: CityPATCH = Body(
         ...,
-        openapi_examples={
-            "1": {"summary": "Обновить только название", "value": {"name": "Санкт-Петербург"}},
-            "2": {"summary": "Обновить только страну", "value": {"country_id": 58}},
-            "3": {"summary": "Обновить оба поля", "value": {"name": "Санкт-Петербург", "country_id": 58}},
-        },
+        openapi_examples=PATCH_CITY_BODY_EXAMPLES,
     ),
 ) -> MessageResponse:
     """

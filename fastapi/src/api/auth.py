@@ -2,6 +2,7 @@ from fastapi import APIRouter, Body, HTTPException, Request, Response
 
 from src.api.dependencies import AuthServiceDep, CurrentUserDep, DBDep, UsersServiceDep
 from src.config import settings
+from src.examples.auth_examples import LOGIN_BODY_EXAMPLES, REGISTER_BODY_EXAMPLES
 from src.metrics.collectors import (
     auth_failed_attempts_total,
     auth_logins_total,
@@ -36,28 +37,7 @@ async def register_user(
     request: Request,  # noqa: ARG001
     auth_service: AuthServiceDep,
     users_service: UsersServiceDep,
-    user_data: UserRequestRegister = Body(
-        ...,
-        openapi_examples={
-            "1": {
-                "summary": "Минимальная регистрация",
-                "description": "Регистрация только с email и паролем",
-                "value": {"email": "ivan.petrov@async-black.ru", "password": "TestPassword123!"},
-            },
-            "2": {
-                "summary": "Полная регистрация",
-                "description": "Регистрация со всеми полями",
-                "value": {
-                    "email": "maria.ivanova@async-black.ru",
-                    "password": "TestPassword123!",
-                    "first_name": "Мария",
-                    "last_name": "Иванова",
-                    "telegram_id": "123456789",
-                    "pachca_id": "pachca_123",
-                },
-            },
-        },
-    ),
+    user_data: UserRequestRegister = Body(..., openapi_examples=REGISTER_BODY_EXAMPLES),
 ) -> UserResponse:
     """
     Зарегистрировать нового пользователя.
@@ -111,16 +91,7 @@ async def login_user(
     response: Response,
     db: DBDep,
     auth_service: AuthServiceDep,
-    login_data: UserRequestLogin = Body(
-        ...,
-        openapi_examples={
-            "1": {
-                "summary": "Вход пользователя",
-                "description": "Вход с email и паролем",
-                "value": {"email": "ivan.petrov@async-black.ru", "password": "TestPassword123!"},
-            }
-        },
-    ),
+    login_data: UserRequestLogin = Body(..., openapi_examples=LOGIN_BODY_EXAMPLES),
 ) -> TokenResponse:
     """
     Войти в систему.

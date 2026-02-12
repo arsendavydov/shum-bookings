@@ -48,7 +48,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 
 API_DESCRIPTION = """
-RESTful API для сервиса бронирования отелей с полным функционалом управления бронированиями, отелями, номерами и пользователями.
+RESTful API для сервиса бронирования отелей.
 
 ## Основные возможности
 
@@ -60,16 +60,13 @@ RESTful API для сервиса бронирования отелей с по�
 - **Мониторинг и метрики**: Health checks, метрики Prometheus, структурированное логирование
 - **Безопасность**: Rate limiting, HTTPS, защита от основных уязвимостей, валидация данных
 
-## Аутентификация
+## Технологии
 
-API использует JWT токены для аутентификации. Токен можно передать:
-- В HTTP-only cookie `access_token`
-- В заголовке `Authorization: Bearer <token>`
+FastAPI, Python 3.11, PostgreSQL 16, Redis 7, Celery, Nginx, Kubernetes (K3s), CI/CD (GitHub Actions)
 
 ## Документация и исходный код
 
-- **GitHub**: https://github.com/arsendavydov/shum-booking
-- **Технологии**: FastAPI, Python 3.11, PostgreSQL 16, Redis 7, Celery, Kubernetes (K3s)
+[GitHub Repository](https://github.com/arsendavydov/shum-booking)
 """
 
 app = FastAPI(
@@ -78,15 +75,6 @@ app = FastAPI(
     version="1.0.1",
     lifespan=lifespan,
     root_path=settings.ROOT_PATH if settings.ROOT_PATH else None,  # Для работы за прокси с префиксом пути
-    contact={
-        "name": "Support",
-        "email": "support@async-black.ru",
-        "url": "https://github.com/arsendavydov/shum-booking",
-    },
-    license_info={
-        "name": "MIT",
-    },
-    terms_of_service="https://async-black.ru/terms",
     openapi_tags=[
         {
             "name": "Система",
@@ -145,16 +133,7 @@ def custom_openapi():
         description=app.description,
         routes=app.routes,
         tags=app.openapi_tags,
-        contact=app.contact,
-        license_info=app.license_info,
-        terms_of_service=app.terms_of_service,
     )
-
-    # Добавляем externalDocs для ссылки на GitHub репозиторий
-    openapi_schema["externalDocs"] = {
-        "description": "GitHub Repository",
-        "url": "https://github.com/arsendavydov/shum-booking",
-    }
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema

@@ -3,6 +3,11 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.decorator import cache
 
 from src.api.dependencies import CountriesServiceDep, DBDep, PaginationDep
+from src.examples.countries_examples import (
+    CREATE_COUNTRY_BODY_EXAMPLES,
+    PATCH_COUNTRY_BODY_EXAMPLES,
+    UPDATE_COUNTRY_BODY_EXAMPLES,
+)
 from src.schemas import MessageResponse
 from src.schemas.countries import Country, CountryPATCH, SchemaCountry
 from src.utils.api_helpers import get_or_404
@@ -24,7 +29,8 @@ async def get_countries(
     pagination: PaginationDep,
     db: DBDep,
     name: str | None = Query(
-        default=None, description="Фильтр по названию страны (частичное совпадение, без учета регистра)"
+        default=None,
+        description="Фильтр по названию страны (частичное совпадение, без учета регистра)",
     ),
 ) -> list[SchemaCountry]:
     """
@@ -77,9 +83,7 @@ async def get_country_by_id(country_id: int = Path(..., description="ID стра
 )
 async def create_country(
     countries_service: CountriesServiceDep,
-    country: Country = Body(
-        ..., openapi_examples={"1": {"summary": "Создать страну", "value": {"name": "Россия", "iso_code": "RU"}}}
-    ),
+    country: Country = Body(..., openapi_examples=CREATE_COUNTRY_BODY_EXAMPLES),
 ) -> MessageResponse:
     """
     Создать новую страну.
@@ -113,16 +117,7 @@ async def create_country(
 async def update_country(
     countries_service: CountriesServiceDep,
     country_id: int = Path(..., description="ID страны"),
-    country: Country = Body(
-        ...,
-        openapi_examples={
-            "1": {
-                "summary": "Обновить страну",
-                "description": "Полное обновление информации о стране",
-                "value": {"name": "Российская Федерация", "iso_code": "RU"},
-            }
-        },
-    ),
+    country: Country = Body(..., openapi_examples=UPDATE_COUNTRY_BODY_EXAMPLES),
 ) -> MessageResponse:
     """
     Полное обновление страны.
@@ -157,14 +152,7 @@ async def update_country(
 async def partial_update_country(
     countries_service: CountriesServiceDep,
     country_id: int = Path(..., description="ID страны"),
-    country: CountryPATCH = Body(
-        ...,
-        openapi_examples={
-            "1": {"summary": "Обновить только название", "value": {"name": "Российская Федерация"}},
-            "2": {"summary": "Обновить только ISO код", "value": {"iso_code": "RU"}},
-            "3": {"summary": "Обновить оба поля", "value": {"name": "Российская Федерация", "iso_code": "RU"}},
-        },
-    ),
+    country: CountryPATCH = Body(..., openapi_examples=PATCH_COUNTRY_BODY_EXAMPLES),
 ) -> MessageResponse:
     """
     Частичное обновление страны.

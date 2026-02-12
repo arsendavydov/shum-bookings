@@ -5,6 +5,11 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.decorator import cache
 
 from src.api.dependencies import DBDep, PaginationDep, RoomsServiceDep
+from src.examples.rooms_examples import (
+    CREATE_ROOM_BODY_EXAMPLES,
+    PATCH_ROOM_BODY_EXAMPLES,
+    UPDATE_ROOM_BODY_EXAMPLES,
+)
 from src.schemas import MessageResponse
 from src.schemas.rooms import Room, RoomPATCH, SchemaRoom, SchemaRoomAvailable
 from src.utils.api_helpers import get_or_404
@@ -28,7 +33,8 @@ async def get_rooms(
     pagination: PaginationDep,
     db: DBDep,
     title: str | None = Query(
-        default=None, description="Фильтр по названию номера (частичное совпадение, без учета регистра)"
+        default=None,
+        description="Фильтр по названию номера (частичное совпадение, без учета регистра)",
     ),
 ) -> list[SchemaRoom]:
     """
@@ -141,33 +147,7 @@ async def get_room_by_id(hotel_id: int, room_id: int, db: DBDep) -> SchemaRoom:
 async def create_room(
     hotel_id: int,
     rooms_service: RoomsServiceDep,
-    room: Room = Body(
-        ...,
-        openapi_examples={
-            "1": {
-                "summary": "Создать стандартный номер",
-                "description": "Создание стандартного номера с базовыми удобствами",
-                "value": {
-                    "title": "Стандартный номер",
-                    "description": "Уютный стандартный номер с современным дизайном",
-                    "price": 3000,
-                    "quantity": 5,
-                    "facility_ids": [120, 121, 122],
-                },
-            },
-            "2": {
-                "summary": "Создать люкс номер",
-                "description": "Создание люкс номера с полным набором удобств",
-                "value": {
-                    "title": "Люкс",
-                    "description": "Просторный люкс номер с видом на море",
-                    "price": 8000,
-                    "quantity": 2,
-                    "facility_ids": [120, 121, 122, 123, 124, 129, 131],
-                },
-            },
-        },
-    ),
+    room: Room = Body(..., openapi_examples=CREATE_ROOM_BODY_EXAMPLES),
 ) -> MessageResponse:
     """
     Создать новый номер в отеле.
@@ -207,22 +187,7 @@ async def update_room(
     hotel_id: int,
     room_id: int,
     rooms_service: RoomsServiceDep,
-    room: Room = Body(
-        ...,
-        openapi_examples={
-            "1": {
-                "summary": "Полное обновление номера",
-                "description": "Обновление всех полей номера",
-                "value": {
-                    "title": "Улучшенный номер",
-                    "description": "Обновленное описание номера",
-                    "price": 4500,
-                    "quantity": 4,
-                    "facility_ids": [120, 121, 122, 123],
-                },
-            }
-        },
-    ),
+    room: Room = Body(..., openapi_examples=UPDATE_ROOM_BODY_EXAMPLES),
 ) -> MessageResponse:
     """
     Полное обновление номера.
@@ -265,17 +230,7 @@ async def partial_update_room(
     hotel_id: int,
     room_id: int,
     rooms_service: RoomsServiceDep,
-    room: RoomPATCH = Body(
-        ...,
-        openapi_examples={
-            "1": {"summary": "Обновить только цену", "value": {"price": 3500}},
-            "2": {"summary": "Обновить количество", "value": {"quantity": 6}},
-            "3": {
-                "summary": "Обновить несколько полей",
-                "value": {"title": "Премиум номер", "price": 5500, "facility_ids": [120, 121, 122, 123, 124]},
-            },
-        },
-    ),
+    room: RoomPATCH = Body(..., openapi_examples=PATCH_ROOM_BODY_EXAMPLES),
 ) -> MessageResponse:
     """
     Частичное обновление номера.

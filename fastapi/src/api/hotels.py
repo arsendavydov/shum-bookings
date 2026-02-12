@@ -4,6 +4,11 @@ from fastapi import APIRouter, Body, HTTPException, Query
 from fastapi_cache.decorator import cache
 
 from src.api.dependencies import DBDep, HotelsServiceDep, PaginationDep
+from src.examples.hotels_examples import (
+    CREATE_HOTEL_BODY_EXAMPLES,
+    PATCH_HOTEL_BODY_EXAMPLES,
+    UPDATE_HOTEL_BODY_EXAMPLES,
+)
 from src.metrics.collectors import hotels_created_total
 from src.metrics.helpers import should_collect_metrics
 from src.schemas import MessageResponse
@@ -28,10 +33,12 @@ async def get_hotels(
     pagination: PaginationDep,
     db: DBDep,
     title: str | None = Query(
-        default=None, description="Фильтр по названию отеля (частичное совпадение, без учета регистра)"
+        default=None,
+        description="Фильтр по названию отеля (частичное совпадение, без учета регистра)",
     ),
     city: str | None = Query(
-        default=None, description="Фильтр по названию города (частичное совпадение, без учета регистра)"
+        default=None,
+        description="Фильтр по названию города (частичное совпадение, без учета регистра)",
     ),
     city_id: int | None = Query(default=None, description="Фильтр по ID города (точное совпадение)"),
     sort_by: str = Query(default="id", description="Поле для сортировки: id, title, city", pattern="^(id|title|city)$"),
@@ -80,10 +87,12 @@ async def get_hotels_with_available_rooms(
         default=None, description="Опциональный ID отеля. Если указан, возвращается только этот отель."
     ),
     title: str | None = Query(
-        default=None, description="Фильтр по названию отеля (частичное совпадение, без учета регистра)"
+        default=None,
+        description="Фильтр по названию отеля (частичное совпадение, без учета регистра)",
     ),
     city: str | None = Query(
-        default=None, description="Фильтр по названию города (частичное совпадение, без учета регистра)"
+        default=None,
+        description="Фильтр по названию города (частичное совпадение, без учета регистра)",
     ),
 ) -> list[SchemaHotelWithRooms]:
     """
@@ -161,21 +170,7 @@ async def get_hotel_by_id(hotel_id: int, db: DBDep) -> SchemaHotel:
 )
 async def create_hotel(
     hotels_service: HotelsServiceDep,
-    hotel: Hotel = Body(
-        ...,
-        openapi_examples={
-            "1": {
-                "summary": "Создать отель в Москве",
-                "description": "Пример создания отеля в Москве (название города может быть в любом регистре)",
-                "value": {"title": "Гранд Отель Москва", "city": "Москва", "address": "Тверская улица, дом 3"},
-            },
-            "2": {
-                "summary": "Создать отель в Дубае",
-                "description": "Пример создания отеля в Дубае (название города может быть в любом регистре)",
-                "value": {"title": "Burj Al Arab", "city": "дубай", "address": "Jumeirah Street, 3"},
-            },
-        },
-    ),
+    hotel: Hotel = Body(..., openapi_examples=CREATE_HOTEL_BODY_EXAMPLES),
 ) -> MessageResponse:
     """
     Создать новый отель.
@@ -216,19 +211,7 @@ async def create_hotel(
 async def update_hotel(
     hotel_id: int,
     hotels_service: HotelsServiceDep,
-    hotel: Hotel = Body(
-        ...,
-        openapi_examples={
-            "1": {
-                "summary": "Обновить отель",
-                "value": {
-                    "title": "Сочи Отель Обновленный",
-                    "city": "Москва",
-                    "address": "Краснодарский край, улица Ленина, 1",
-                },
-            }
-        },
-    ),
+    hotel: Hotel = Body(..., openapi_examples=UPDATE_HOTEL_BODY_EXAMPLES),
 ) -> MessageResponse:
     """
     Полное обновление отеля.
@@ -270,21 +253,7 @@ async def update_hotel(
 async def partial_update_hotel(
     hotel_id: int,
     hotels_service: HotelsServiceDep,
-    hotel: HotelPATCH = Body(
-        ...,
-        openapi_examples={
-            "1": {"summary": "Обновить только название", "value": {"title": "Сочи Отель Премиум"}},
-            "2": {"summary": "Обновить только адрес", "value": {"address": "Краснодарский край, улица Ленина, 1"}},
-            "3": {
-                "summary": "Обновить несколько полей",
-                "value": {
-                    "title": "Сочи Отель Премиум",
-                    "city": "москва",
-                    "address": "Краснодарский край, улица Ленина, 1",
-                },
-            },
-        },
-    ),
+    hotel: HotelPATCH = Body(..., openapi_examples=PATCH_HOTEL_BODY_EXAMPLES),
 ) -> MessageResponse:
     """
     Частичное обновление отеля.

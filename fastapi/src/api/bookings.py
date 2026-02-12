@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Body, HTTPException
 
 from src.api.dependencies import BookingsServiceDep, CurrentUserDep, PaginationDep
+from src.examples.bookings_examples import CREATE_BOOKING_BODY_EXAMPLES
 from src.metrics.collectors import bookings_created_total
 from src.metrics.helpers import should_collect_metrics
 from src.schemas import MessageResponse
@@ -67,21 +68,7 @@ async def get_my_bookings(
 async def create_booking(
     current_user: CurrentUserDep,
     bookings_service: BookingsServiceDep,
-    booking: Booking = Body(
-        ...,
-        openapi_examples={
-            "1": {
-                "summary": "Создать бронирование на 3 ночи",
-                "description": "Бронирование номера на период с завтрашнего дня на 3 ночи",
-                "value": {"room_id": 508, "date_from": "2026-02-15", "date_to": "2026-02-18"},
-            },
-            "2": {
-                "summary": "Создать бронирование на неделю",
-                "description": "Бронирование номера на неделю",
-                "value": {"room_id": 523, "date_from": "2026-03-01", "date_to": "2026-03-08"},
-            },
-        },
-    ),
+    booking: Booking = Body(..., openapi_examples=CREATE_BOOKING_BODY_EXAMPLES),
 ) -> MessageResponse:
     """
     Создать новое бронирование.

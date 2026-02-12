@@ -1,6 +1,10 @@
 from fastapi import APIRouter, Body, HTTPException, Query
 
 from src.api.dependencies import DBDep, PaginationDep, UsersServiceDep
+from src.examples.users_examples import (
+    PATCH_USER_BODY_EXAMPLES,
+    UPDATE_USER_BODY_EXAMPLES,
+)
 from src.schemas import MessageResponse
 from src.schemas.users import SchemaUser, UserPATCH, UserRegister
 from src.utils.api_helpers import get_or_404
@@ -70,23 +74,7 @@ async def get_user_by_id(user_id: int, db: DBDep) -> SchemaUser:
 async def update_user(
     user_id: int,
     users_service: UsersServiceDep,
-    user: UserRegister = Body(
-        ...,
-        openapi_examples={
-            "1": {
-                "summary": "Полное обновление пользователя",
-                "description": "Обновление всех полей пользователя",
-                "value": {
-                    "email": "ivan.petrov@async-black.ru",
-                    "hashed_password": "$2b$12$...",
-                    "first_name": "Иван",
-                    "last_name": "Петров",
-                    "telegram_id": 123456789,
-                    "pachca_id": 987654321,
-                },
-            }
-        },
-    ),
+    user: UserRegister = Body(..., openapi_examples=UPDATE_USER_BODY_EXAMPLES),
 ) -> MessageResponse:
     """
     Полное обновление пользователя.
@@ -117,17 +105,7 @@ async def update_user(
 async def partial_update_user(
     user_id: int,
     users_service: UsersServiceDep,
-    user: UserPATCH = Body(
-        ...,
-        openapi_examples={
-            "1": {"summary": "Обновить только имя", "value": {"first_name": "Иван"}},
-            "2": {"summary": "Обновить email", "value": {"email": "new.email@async-black.ru"}},
-            "3": {
-                "summary": "Обновить несколько полей",
-                "value": {"first_name": "Мария", "last_name": "Иванова", "telegram_id": 987654321},
-            },
-        },
-    ),
+    user: UserPATCH = Body(..., openapi_examples=PATCH_USER_BODY_EXAMPLES),
 ) -> MessageResponse:
     """
     Частичное обновление пользователя.

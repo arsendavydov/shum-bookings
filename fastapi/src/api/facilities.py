@@ -26,7 +26,8 @@ async def get_facilities(
     pagination: PaginationDep,
     db: DBDep,
     title: str | None = Query(
-        default=None, description="Фильтр по названию удобства (частичное совпадение, без учета регистра)"
+        default=None,
+        description="Фильтр по названию удобства (частичное совпадение, без учета регистра)",
     ),
 ) -> list[SchemaFacility]:
     """
