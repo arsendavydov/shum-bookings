@@ -1,33 +1,17 @@
-## Общие скрипты для деплоя
+## GitLab CI
 
-Эта папка содержит **общие скрипты для деплоя**, которые используются как GitHub Actions, так и другими CI/CD системами.
+Эта папка предназначена для документации и специфичных скриптов для GitLab CI/CD.
 
-### Скрипты
+### Общие скрипты
 
-- **`get-kubeconfig.sh`** — получение kubeconfig с сервера по SSH
-  - Используется GitHub Actions для подключения к K3s кластеру
-  - Получает kubeconfig через SSH и сохраняет локально
-  
-- **`create-configmap-and-secret.sh`** — создание ConfigMap и Secret из `.prod.env`
-  - Загружает `.prod.env` с сервера по SSH
-  - Создает Kubernetes ConfigMap и Secret
-  - Автоматически определяет `imagePullSecret` на основе registry (ghcr.io/gitlab)
-  
-- **`apply-manifests.sh`** — применение Kubernetes манифестов
-  - Применяет все манифесты из `k3s/*.yaml`
-  - Использует retry логику для надежности
-  - Проверяет готовность ресурсов после применения
+Основная логика деплоя вынесена в общие скрипты в корне `ci/`:
+- `ci/get-kubeconfig.sh` — получение kubeconfig с сервера
+- `ci/create-configmap-and-secret.sh` — создание ConfigMap и Secret
+- `ci/apply-manifests.sh` — применение Kubernetes манифестов
+- `ci/helpers.sh` — вспомогательные функции
 
-- **`helpers.sh`** — вспомогательные функции
-  - Общие утилиты для работы с Kubernetes
-  - Функции проверки и валидации
+Эти скрипты используются как GitHub Actions, так и GitLab CI.
 
-### Использование
+### Конфигурация
 
-Эти скрипты вызываются из:
-- **GitHub Actions** (`.github/workflows/deploy.yml`) — основной способ деплоя
-- Других CI/CD систем при необходимости
-
-Все скрипты универсальны и не зависят от конкретной CI/CD системы.
-
-
+GitLab CI конфигурация находится в `.gitlab-ci.yml` в корне проекта.

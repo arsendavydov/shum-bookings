@@ -26,7 +26,12 @@ IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 @router.post(
     "/upload/{hotel_id}",
     summary="Загрузить изображение для отеля",
-    description="Загружает изображение для отеля. Файл должен быть не менее 1000px в ширину. Изображение обрабатывается в фоне через Celery: создаются версии 200px, 500px и 1000px в ширину.",
+    description=(
+        "Загружает изображение для отеля. "
+        "**Поддерживаемые форматы**: JPEG, PNG, GIF, BMP, WebP, TIFF и другие форматы с MIME-типом `image/*`. "
+        "**Требования**: файл должен быть не менее 1000px в ширину, максимальный размер файла - 10 МБ. "
+        "Изображение обрабатывается в фоне через Celery: создаются версии 200px, 500px и 1000px в ширину."
+    ),
     response_model=ImageUploadResponse,
 )
 async def upload_image(
@@ -34,6 +39,9 @@ async def upload_image(
 ) -> ImageUploadResponse:
     """
     Загрузить изображение для отеля.
+
+    Поддерживаемые форматы: JPEG, PNG, GIF, BMP, WebP, TIFF и другие форматы с MIME-типом image/*.
+    Требования: файл должен быть не менее 1000px в ширину, максимальный размер файла - 10 МБ.
 
     Изображение обрабатывается асинхронно через Celery:
     - Проверяется минимальная ширина (1000px)
@@ -43,7 +51,6 @@ async def upload_image(
     Args:
         hotel_id: ID отеля
         file: Файл изображения
-        db: Сессия базы данных
 
     Returns:
         Информация о загруженном изображении
@@ -51,6 +58,7 @@ async def upload_image(
     Raises:
         HTTPException: 404 если отель не найден
         HTTPException: 400 если файл не является изображением или слишком маленький
+        HTTPException: 413 если размер файла превышает 10 МБ
     """
     # Проверяем тип файла
     if not file.content_type or not file.content_type.startswith("image/"):

@@ -240,7 +240,7 @@ jobs:
           
           echo ""
           echo "🔧 Подготовка скриптов..."
-          chmod +x ci/gitlab/*.sh ci/common/*.sh || true
+          chmod +x ci/*.sh ci/common/*.sh || true
           
           echo ""
           echo "🔍 Проверка ACTIVE_CI_PROVIDER..."
@@ -255,7 +255,7 @@ jobs:
           echo "=== KUBECONFIG: Получение конфигурации ==="
           echo "=========================================="
           echo ""
-          ci/gitlab/get-kubeconfig.sh
+          ci/get-kubeconfig.sh
           echo ""
           echo "✅ Kubeconfig готов к использованию"
 
@@ -571,11 +571,11 @@ jobs:
           echo "=========================================="
           echo ""
           echo "=== DEPLOY (GitHub): создание ConfigMap и Secret через общий скрипт ==="
-          ci/gitlab/create-configmap-and-secret.sh
+          ci/create-configmap-and-secret.sh
 
           echo ""
           echo "=== DEPLOY (GitHub): применение манифестов через общий скрипт ==="
-          ci/gitlab/apply-manifests.sh
+          ci/apply-manifests.sh
 
       - name: Wait for deployment and verify health
         env:

@@ -93,10 +93,10 @@ deploy:production:
     - export K3S_SERVER_IP
     - export K3S_SSH_HOST="$K3S_SSH_USER@$K3S_SERVER_IP"
     - export KUBE_CONFIG_PATH="$HOME/.kube/config"
-    - chmod +x ci/gitlab/*.sh ci/common/*.sh || true
+    - chmod +x ci/*.sh ci/common/*.sh || true
     - export ACTIVE_CI_PROVIDER_EXPECTED=gitlab
     - ci/common/check-active-provider.sh || { echo "⚠️ ACTIVE_CI_PROVIDER не gitlab, деплой из GitLab пропускаем"; exit 0; }
-    - ci/gitlab/get-kubeconfig.sh
+    - ci/get-kubeconfig.sh
   script:
     - |
       echo "=== DEPLOY: Шаг 1/3 — экспорт переменных ресурсов и health-check ==="
@@ -215,9 +215,9 @@ deploy:production:
       sed -i "s|\${LETSENCRYPT_EMAIL:-arsen.davydov@gmail.com}|$LETSENCRYPT_EMAIL|g" k3s/cert-manager-issuer.yaml
       sed -i "s|\${DOMAIN:-async-black.ru}|$DOMAIN|g" k3s/ingress.yaml
     - echo "=== DEPLOY: Шаг 3/3 — создание ConfigMap и Secret ==="
-    - ci/gitlab/create-configmap-and-secret.sh
+    - ci/create-configmap-and-secret.sh
     - echo "=== DEPLOY: Финальный шаг — применение Kubernetes манифестов ==="
-    - ci/gitlab/apply-manifests.sh
+    - ci/apply-manifests.sh
   environment:
     name: production
     url: ${PRODUCTION_DOMAIN:-https://api.yourdomain.com}
