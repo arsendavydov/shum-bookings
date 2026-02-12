@@ -132,7 +132,6 @@ class AuthService:
         try:
             # Явно указываем, что нужно проверять подпись
             # PyJWT должен выбрасывать InvalidTokenError при неверной подписи
-            # Используем verify=True по умолчанию (это включено по умолчанию, но явно указываем)
             payload = jwt.decode(
                 token,
                 self.secret_key,

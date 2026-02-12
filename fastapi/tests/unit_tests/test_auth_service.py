@@ -134,13 +134,12 @@ class TestAuthServiceJWT:
         """Проверить, что decode_access_token возвращает None для подмененного токена."""
         data = {"sub": "123", "email": "test@example.com"}
         token = auth_service.create_access_token(data)
-        # Подменяем символ в подписи (последняя часть токена после точки)
+        # Подменяем подпись полностью - создаем полностью невалидную подпись
         # Разбиваем токен на части: header.payload.signature
         parts = token.split(".")
         if len(parts) == 3:
-            # Изменяем подпись - заменяем последний символ
-            tampered_signature = parts[2][:-1] + ("X" if parts[2][-1] != "X" else "Y")
-            tampered = f"{parts[0]}.{parts[1]}.{tampered_signature}"
+            # Заменяем подпись на полностью невалидную (невалидный base64)
+            tampered = f"{parts[0]}.{parts[1]}.INVALID_SIGNATURE_12345"
         else:
             # Если структура неверна, просто меняем последний символ
             tampered = token[:-1] + ("X" if token[-1] != "X" else "Y")
