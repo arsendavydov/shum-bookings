@@ -72,7 +72,7 @@ FastAPI, Python 3.11, PostgreSQL 16, Redis 7, Celery, Nginx, Kubernetes (K3s), C
 app = FastAPI(
     title="Shum Booking API",
     description=API_DESCRIPTION,
-    version="1.0.1",
+    version="1.0.3",
     lifespan=lifespan,
     root_path=settings.ROOT_PATH if settings.ROOT_PATH else None,  # Для работы за прокси с префиксом пути
     openapi_tags=[
