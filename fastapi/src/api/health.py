@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from src.api.dependencies import DBDep
@@ -91,6 +92,7 @@ def check_celery_workers() -> dict:
     summary="Health check",
     description="Проверка состояния приложения, подключения к БД, Redis, Celery и дискового пространства",
     tags=["Система"],
+    response_class=JSONResponse,
 )
 async def health_check(db: DBDep) -> dict:
     """
@@ -164,15 +166,25 @@ async def health_check(db: DBDep) -> dict:
 @router.get(
     "/ready",
     summary="Readiness check",
-    description="Проверка готовности приложения к обработке запросов",
+    description=(
+        "Проверка готовности приложения к обработке запросов. "
+        "Проверяет подключение к базе данных. "
+        "Используется Kubernetes для определения, когда под готов принимать трафик. "
+        "Если БД недоступна, приложение не готово к работе."
+    ),
     tags=["Система"],
+    response_class=JSONResponse,
 )
 async def readiness_check(db: DBDep) -> dict:
     """
-    Проверка готовности приложения.
+    Проверка готовности приложения к обработке запросов.
+
+    Readiness probe проверяет, может ли приложение принимать и обрабатывать запросы.
+    В отличие от liveness probe, readiness проверяет зависимости (БД) и используется
+    для управления трафиком в Kubernetes.
 
     Returns:
-        Словарь со статусом готовности
+        Словарь со статусом готовности (ready: bool, timestamp: str, error?: str)
     """
     try:
         result = await db.execute(text("SELECT 1"))
@@ -186,15 +198,25 @@ async def readiness_check(db: DBDep) -> dict:
 @router.get(
     "/live",
     summary="Liveness check",
-    description="Проверка жизнеспособности приложения",
+    description=(
+        "Проверка жизнеспособности приложения. "
+        "Проверяет, что процесс приложения работает и отвечает на запросы. "
+        "Используется Kubernetes для определения, нужно ли перезапустить под. "
+        "Не проверяет зависимости (БД, Redis) - только факт работы процесса."
+    ),
     tags=["Система"],
+    response_class=JSONResponse,
 )
 async def liveness_check() -> dict:
     """
     Проверка жизнеспособности приложения.
 
+    Liveness probe проверяет, что процесс приложения работает и не завис.
+    В отличие от readiness probe, liveness не проверяет зависимости и используется
+    Kubernetes для принятия решения о перезапуске пода при сбое.
+
     Returns:
-        Словарь со статусом жизнеспособности
+        Словарь со статусом жизнеспособности (alive: bool, timestamp: str)
     """
     return {"alive": True, "timestamp": datetime.now().isoformat()}
 
