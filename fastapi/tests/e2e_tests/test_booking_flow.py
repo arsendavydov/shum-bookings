@@ -120,8 +120,8 @@ class TestBookingFlow:
 
         # 7. Создание бронирования (требует авторизации)
         print("\n📅 Шаг 7: Создание бронирования")
-        # Устанавливаем токен в cookies для авторизованных запросов
-        cookies = {"access_token": access_token}
+        # Используем заголовок Authorization для авторизованных запросов
+        headers = {"Authorization": f"Bearer {access_token}"}
 
         # Даты для бронирования (через месяц от текущей даты)
         from datetime import datetime, timedelta
@@ -135,7 +135,7 @@ class TestBookingFlow:
             "date_from": check_in,
             "date_to": check_out,
         }
-        booking_response = e2e_client.post("/bookings", json=booking_data, cookies=cookies)
+        booking_response = e2e_client.post("/bookings", json=booking_data, headers=headers)
         wait_between_requests(delay)
 
         # Эндпоинт возвращает 200 OK с MessageResponse {"status": "OK"}
@@ -147,7 +147,7 @@ class TestBookingFlow:
         # 8. Просмотр своих бронирований
         print("\n📋 Шаг 8: Просмотр своих бронирований")
         # Эндпоинт своих бронирований: /bookings/me
-        my_bookings_response = e2e_client.get("/bookings/me", cookies=cookies)
+        my_bookings_response = e2e_client.get("/bookings/me", headers=headers)
         wait_between_requests(delay)
 
         assert my_bookings_response.status_code == 200
@@ -172,7 +172,7 @@ class TestBookingFlow:
 
         # 9. Отмена бронирования
         print("\n❌ Шаг 9: Отмена бронирования")
-        cancel_response = e2e_client.delete(f"/bookings/{booking_id}", cookies=cookies)
+        cancel_response = e2e_client.delete(f"/bookings/{booking_id}", headers=headers)
         wait_between_requests(delay)
 
         assert cancel_response.status_code in [200, 204], (
@@ -182,7 +182,7 @@ class TestBookingFlow:
 
         # 10. Проверка, что бронирование удалено
         print("\n✅ Шаг 10: Проверка удаления бронирования")
-        check_bookings_response = e2e_client.get("/bookings/me", cookies=cookies)
+        check_bookings_response = e2e_client.get("/bookings/me", headers=headers)
         wait_between_requests(delay)
 
         assert check_bookings_response.status_code == 200

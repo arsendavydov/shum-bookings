@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from src.api.dependencies import DBDep
+from src.config import settings
 from src.metrics.setup import get_metrics
 from src.utils.logger import get_logger
 
@@ -191,6 +192,13 @@ async def health_check_detailed(db: DBDep):
     # Если БД недоступна, приложение полностью не работает
     if status["database"] == "disconnected":
         status["status"] = "down"
+
+    # Информация о rate limiting
+    status["rate_limiting"] = {
+        "enabled": settings.RATE_LIMIT_ENABLED,
+        "api_limit_per_minute": settings.RATE_LIMIT_PER_MINUTE,
+        "auth_limit_per_minute": settings.RATE_LIMIT_AUTH_PER_MINUTE,
+    }
 
     return JSONResponse(content=status, media_type="application/json")
 

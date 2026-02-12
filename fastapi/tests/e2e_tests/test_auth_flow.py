@@ -61,8 +61,8 @@ class TestAuthFlow:
         # 2. Использование access токена для получения данных пользователя
         # В проде эндпоинт расположен по пути /auth/me
         print("\n👤 Шаг 2: Получение данных пользователя с access токеном")
-        cookies = {"access_token": access_token}
-        me_response = e2e_client.get("/auth/me", cookies=cookies)
+        headers = {"Authorization": f"Bearer {access_token}"}
+        me_response = e2e_client.get("/auth/me", headers=headers)
         wait_between_requests(delay)
 
         assert me_response.status_code == 200
@@ -73,7 +73,7 @@ class TestAuthFlow:
 
         # 3. Выход из системы (logout)
         print("\n🚪 Шаг 3: Выход из системы")
-        logout_response = e2e_client.post("/auth/logout", cookies=cookies)
+        logout_response = e2e_client.post("/auth/logout", headers=headers)
         wait_between_requests(delay)
 
         # В проде после logout access_token может оставаться валидным
@@ -96,15 +96,15 @@ class TestAuthFlow:
 
         # Получаем новые токены
         new_access_token = login_response.cookies.get("access_token")
-        new_refresh_token = login_response.cookies.get("refresh_token")
-        assert new_access_token is not None
-        assert new_refresh_token is not None
+        new_refresh_token = login_response.json().get("refresh_token")  # refresh_token в JSON ответе, как и при первом входе
+        assert new_access_token is not None, "Access token должен быть в cookies"
+        assert new_refresh_token is not None, "Refresh token должен быть в JSON ответе"
         print("✅ Новые токены получены")
 
         # 6. Использование нового access токена
         print("\n👤 Шаг 6: Использование нового access токена")
-        new_cookies = {"access_token": new_access_token}
-        new_me_response = e2e_client.get("/auth/me", cookies=new_cookies)
+        new_headers = {"Authorization": f"Bearer {new_access_token}"}
+        new_me_response = e2e_client.get("/auth/me", headers=new_headers)
         wait_between_requests(delay)
 
         assert new_me_response.status_code == 200
@@ -114,6 +114,10 @@ class TestAuthFlow:
 
         # 7. Обновление access токена через refresh token
         print("\n🔄 Шаг 7: Обновление access токена через refresh token")
+        # Добавляем задержку перед обновлением токена (минимум 1 секунда), чтобы гарантировать разное время создания
+        # JWT токены используют iat (issued at) в секундах, поэтому нужна задержка >= 1 секунды
+        import time
+        time.sleep(1.1)  # Небольшая задержка для гарантии разного iat
         # refresh_token передается в JSON body, а новый access_token берем из JSON ответа
         refresh_data = {"refresh_token": new_refresh_token}
         refresh_response = e2e_client.post("/auth/refresh", json=refresh_data)
