@@ -89,7 +89,7 @@ def check_celery_workers() -> dict:
 
 @router.get(
     "/health",
-    summary="Health check",
+    summary="Проверка состояния приложения",
     description=(
         "Подробная проверка состояния приложения и всех зависимостей. "
         "Проверяет подключения к БД, Redis, Celery и дисковое пространство. "
@@ -100,7 +100,7 @@ def check_celery_workers() -> dict:
     tags=["Система"],
     response_class=JSONResponse,
 )
-async def health_check(db: DBDep) -> dict:
+async def health_check(db: DBDep):
     """
     Подробная проверка состояния приложения и всех зависимостей.
 
@@ -175,7 +175,7 @@ async def health_check(db: DBDep) -> dict:
 
 @router.get(
     "/live",
-    summary="Liveness check",
+    summary="Проверка жизнеспособности",
     description=(
         "Проверка жизнеспособности приложения. "
         "Проверяет, что процесс приложения работает и отвечает на запросы. "
@@ -203,7 +203,7 @@ async def liveness_check() -> dict:
 
 @router.get(
     "/ready",
-    summary="Readiness check",
+    summary="Проверка готовности",
     description=(
         "Проверка готовности приложения к обработке запросов. "
         "Проверяет только критичные зависимости (база данных). "
@@ -237,7 +237,7 @@ async def readiness_check(db: DBDep) -> dict:
 
 @router.get(
     "/metrics",
-    summary="Prometheus metrics",
+    summary="Метрики Prometheus",
     description="Эндпоинт для сбора метрик Prometheus. Возвращает все метрики в формате Prometheus.",
     tags=["Система"],
 )

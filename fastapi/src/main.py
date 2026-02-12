@@ -144,6 +144,40 @@ def custom_openapi():
             }
         ]
 
+    # Сортируем эндпоинты в разделе "Система" в нужном порядке
+    if "paths" in openapi_schema:
+        # Порядок эндпоинтов для раздела "Система"
+        system_endpoints_order = ["/health", "/live", "/ready", "/metrics"]
+
+        # Создаем новый словарь paths с отсортированными эндпоинтами
+        sorted_paths = {}
+        system_paths = {}
+        other_paths = {}
+
+        for path, methods in openapi_schema["paths"].items():
+            # Проверяем, есть ли у эндпоинта тег "Система"
+            is_system = False
+            for method_data in methods.values():
+                if isinstance(method_data, dict) and "tags" in method_data:
+                    if "Система" in method_data["tags"]:
+                        is_system = True
+                        break
+
+            if is_system and path in system_endpoints_order:
+                system_paths[path] = methods
+            else:
+                other_paths[path] = methods
+
+        # Добавляем системные эндпоинты в нужном порядке
+        for endpoint in system_endpoints_order:
+            if endpoint in system_paths:
+                sorted_paths[endpoint] = system_paths[endpoint]
+
+        # Добавляем остальные эндпоинты
+        sorted_paths.update(other_paths)
+
+        openapi_schema["paths"] = sorted_paths
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
