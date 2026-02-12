@@ -170,7 +170,7 @@ async def health_check(db: DBDep) -> dict:
     if status["database"] == "disconnected":
         status["status"] = "down"
 
-    return status
+    return JSONResponse(content=status, media_type="application/json")
 
 
 @router.get(
