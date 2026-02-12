@@ -268,8 +268,6 @@ jobs:
           CI_REGISTRY_PASSWORD: ${{ secrets.CI_REGISTRY_PASSWORD }}
           K3S_SSH_USER: ${{ secrets.K3S_SSH_USER }}
           K3S_SERVER_IP: ${{ secrets.K3S_SERVER_IP }}
-          K3S_SSH_USER: ${{ secrets.K3S_SSH_USER }}
-          K3S_SERVER_IP: ${{ secrets.K3S_SERVER_IP }}
         run: |
           echo "=========================================="
           echo "=== DEPLOY (GitHub): Проверка переменных ==="
